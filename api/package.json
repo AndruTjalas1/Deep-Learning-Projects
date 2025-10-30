@@ -1,18 +1,14 @@
 {
-  "name": "api",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "cst435react-api",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": { "node": "20.x" },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
-  },
-  "type": "module"
+    "express": "^4.19.2"
+  }
 }
