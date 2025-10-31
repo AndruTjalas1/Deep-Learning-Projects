@@ -1,0 +1,50 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# PyTorch model files (large binary files)
+*.pt
+*.pth
+
+# Data files
+data/
+*.txt
+!requirements.txt
+!README.md
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Training outputs
+results_grid_search.csv
+generation_test_*.txt
+
+# Visualizations (optional - uncomment if you don't want to track these)
+# visualizations/
+# *.html
+# *.json
+
+# Logs
+*.log
+
+# Environment variables
+.env

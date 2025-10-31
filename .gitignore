@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+/RNN/frontend/node_modules/
+/RNN/backend/.venv/
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model files (too large)
+*.pt
+*.pth
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

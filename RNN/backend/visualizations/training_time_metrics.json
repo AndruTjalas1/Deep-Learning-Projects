@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "Load Training Data": 0.015423774719238281,
+    "Preprocess Text": 0.06254744529724121,
+    "Prepare Sequences": 0.5827395915985107,
+    "Build Model": 0.1916203498840332,
+    "Model Training": 982.855687379837,
+    "Save Model and Tokenizer": 0.10052895545959473,
+    "Generate Visualizations": 0.47906923294067383,
+    "Text Generation Testing": 0.21966814994812012
+  },
+  "total_seconds": 984.5072848796844,
+  "total_formatted": "16.41m (985s)",
+  "timestamp": "2025-10-30 21:20:57"
+}

@@ -1,0 +1,66 @@
+{
+  "project_name": "RNN Text Generation",
+  "description": "LSTM-based text generation system",
+  "version": "1.0.0",
+  
+  "training_config": {
+    "sequence_length": 75,
+    "embedding_dim": 256,
+    "lstm_units": 256,
+    "num_lstm_layers": 2,
+    "dropout_rate": 0.5,
+    "weight_decay": 0.0001,
+    "epochs": 30,
+    "batch_size": 32,
+    "validation_split": 0.2,
+    "early_stopping": true,
+    "early_stopping_patience": 3,
+    "learning_rate": 0.0005
+  },
+  
+  "generation_config": {
+    "default_num_words": 50,
+    "default_temperature": 1.0,
+    "min_temperature": 0.1,
+    "max_temperature": 2.0,
+    "max_seed_length": 500
+  },
+  
+  "data_config": {
+    "min_file_size_kb": 100,
+    "min_words": 10000,
+    "preprocessing": {
+      "lowercase": true,
+      "remove_special_chars": true,
+      "remove_urls": true,
+      "min_word_length": 2
+    }
+  },
+  
+  "model_config": {
+    "optimizer": "Adam",
+    "loss": "categorical_crossentropy",
+    "metrics": ["accuracy"],
+    "activation_hidden": "tanh",
+    "activation_output": "softmax"
+  },
+  
+  "paths": {
+    "data_dir": "data",
+    "model_dir": "saved_models",
+    "visualization_dir": "visualizations",
+    "data_file": "data/training_text.txt",
+    "model_file": "saved_models/model.h5",
+    "tokenizer_file": "saved_models/tokenizer.pkl",
+    "config_file": "saved_models/config.json"
+  },
+  
+  "api_config": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "title": "RNN Text Generator API",
+    "version": "1.0.0",
+    "docs_url": "/docs",
+    "cors_enabled": true
+  }
+}

@@ -1,0 +1,31 @@
+# Deep Learning
+tensorflow==2.15.0
+numpy==1.24.3
+
+# API Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Utilities
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# Visualization
+matplotlib==3.8.2
+seaborn==0.13.1
+plotly==5.18.0
+tensorboard==2.15.1
+
+# Model Persistence
+pickle-mixin==1.0.2
+
+# Data handling
+pandas==2.0.3
+
+# NLP and Grammar Checking
+spacy>=3.7.0
+
+# Web scraping (optional, for data download)
+requests==2.31.0
+beautifulsoup4==4.12.2
