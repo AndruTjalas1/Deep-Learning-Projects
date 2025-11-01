@@ -52,89 +52,73 @@ api = APIRouter(prefix="/api")
 # -------------------------------------------------------------------
 generator: TextGenerator | None = None
 
-# Resolve common locations:
-# Your files live at: RNN/backend/saved_models/{model.pt|model.h5, config.json, tokenizer.json}
-_here = Path(__file__).parent
-_backend_root = _here  # this file is inside backend/
-_saved_models_candidates = [
-    _backend_root / "saved_models",      # RNN/backend/saved_models
-    _here / "saved_models",              # RNN/backend/app/saved_models (if you move app/)
-    Path("saved_models"),                # CWD fallback
-]
+# Your repo layout (per screenshot):
+# RNN/backend/app/main.py
+# RNN/backend/app/saved_models/{model.pt|model.h5, config.json, tokenizer.json}
+HERE = Path(__file__).parent
+MODEL_DIR = (HERE / "saved_models").resolve()
 
 @app.on_event("startup")
 async def load_model():
-    """Load model on startup with verbose diagnostics and tokenizer.json support."""
+    """Load model on startup with hard-set path and loud diagnostics."""
     global generator
     try:
-        print("[BOOT] Looking for model assets in:")
-        for d in _saved_models_candidates:
-            print("  -", d.resolve())
+        print("[BOOT] Expected model directory:", MODEL_DIR)
+        model_pt = MODEL_DIR / "model.pt"
+        model_h5 = MODEL_DIR / "model.h5"
+        cfg_path = MODEL_DIR / "config.json"
+        tok_json = MODEL_DIR / "tokenizer.json"
+        tok_pkl  = MODEL_DIR / "tokenizer.pkl"
 
-        for model_dir in _saved_models_candidates:
-            model_h5 = model_dir / "model.h5"
-            model_pt = model_dir / "model.pt"
-            config_file = model_dir / "config.json"
-            tok_json = model_dir / "tokenizer.json"
-            tok_pkl  = model_dir / "tokenizer.pkl"
+        # Show what exists
+        print("[BOOT] Exists?",
+              "model.pt:", model_pt.exists(),
+              "| model.h5:", model_h5.exists(),
+              "| config.json:", cfg_path.exists(),
+              "| tokenizer.json:", tok_json.exists(),
+              "| tokenizer.pkl:", tok_pkl.exists())
 
-            def has_required_pt():
-                return model_pt.exists() and config_file.exists() and (tok_json.exists() or tok_pkl.exists())
+        if not MODEL_DIR.exists():
+            raise FileNotFoundError(f"saved_models dir does not exist: {MODEL_DIR}")
 
-            def has_required_h5():
-                return model_h5.exists() and config_file.exists() and (tok_json.exists() or tok_pkl.exists())
+        if not cfg_path.exists():
+            raise FileNotFoundError(f"config.json missing in {MODEL_DIR}")
 
-            # Prefer PyTorch if present
-            if has_required_pt():
-                with open(config_file, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
+        if not (tok_json.exists() or tok_pkl.exists()):
+            raise FileNotFoundError(f"tokenizer.json|tokenizer.pkl missing in {MODEL_DIR}")
 
-                generator = TextGenerator(
-                    sequence_length=cfg.get("sequence_length", 30),
-                    embedding_dim=cfg.get("embedding_dim", 50),
-                    lstm_units=cfg.get("lstm_units", 75),
-                    num_lstm_layers=cfg.get("num_lstm_layers", 1),
-                    dropout_rate=cfg.get("dropout_rate", 0.2),
-                    vocab_size=cfg.get("vocab_size"),
-                )
-                generator.config = cfg
-                print(f"[BOOT] Loading PyTorch model from {model_dir.resolve()} …")
-                # TextGenerator.load_model should handle tokenizer.json or .pkl internally
-                generator.load_model(str(model_dir))
-                print(f"✓ PyTorch model loaded successfully from {model_dir.resolve()}")
-                return
+        # Load config
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
 
-            # Fallback: Keras .h5
-            if has_required_h5():
-                with open(config_file, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
+        # Instantiate generator with config
+        generator = TextGenerator(
+            sequence_length=cfg.get("sequence_length", 30),
+            embedding_dim=cfg.get("embedding_dim", 50),
+            lstm_units=cfg.get("lstm_units", 75),
+            num_lstm_layers=cfg.get("num_lstm_layers", 1),
+            dropout_rate=cfg.get("dropout_rate", 0.2),
+            vocab_size=cfg.get("vocab_size"),
+        )
+        generator.config = cfg
 
-                generator = TextGenerator(
-                    sequence_length=cfg.get("sequence_length", 30),
-                    embedding_dim=cfg.get("embedding_dim", 50),
-                    lstm_units=cfg.get("lstm_units", 75),
-                    num_lstm_layers=cfg.get("num_lstm_layers", 1),
-                    dropout_rate=cfg.get("dropout_rate", 0.2),
-                    vocab_size=cfg.get("vocab_size"),
-                )
-                generator.config = cfg
-                print(f"[BOOT] Loading Keras model from {model_dir.resolve()} …")
-                generator.load_model(str(model_dir))
-                print(f"✓ Legacy Keras model loaded successfully from {model_dir.resolve()}")
-                return
+        # Delegate to class loader (it supports tokenizer.json or .pkl in your code)
+        print(f"[BOOT] Loading model from {MODEL_DIR} …")
+        generator.load_model(str(MODEL_DIR))
 
-            # Not found for this dir → print diagnostics
-            print(f"[WARN] Missing assets in {model_dir.resolve()}:")
-            print("  -", "[OK]" if model_pt.exists() else "[MISS]", model_pt.name)
-            print("  -", "[OK]" if model_h5.exists() else "[MISS]", model_h5.name)
-            print("  -", "[OK]" if config_file.exists() else "[MISS]", config_file.name)
-            print("  -", "[OK]" if tok_json.exists() else "[MISS]", tok_json.name)
-            print("  -", "[OK]" if tok_pkl.exists() else "[MISS]", tok_pkl.name)
+        # Confirm we actually have a model object
+        loaded_ok = (
+            getattr(generator, "model", None) is not None or
+            getattr(generator, "torch_model", None) is not None
+        )
+        if not loaded_ok:
+            raise RuntimeError("Generator loaded but no .model/.torch_model set; ensure TextGenerator.load_model sets self.model")
 
-        print("⚠ Model not found. Place model.pt OR model.h5 + config.json + tokenizer.json|pkl under backend/saved_models/.")
+        print("✓ STARTUP SUCCESS — model loaded and ready.")
 
     except Exception as e:
-        print(f"✗ Error loading model: {e}")
+        print("✗ STARTUP FAILURE — model NOT loaded.")
+        print("  Reason:", e)
         print(traceback.format_exc())
 
 # -------------------------------------------------------------------
@@ -142,15 +126,44 @@ async def load_model():
 # -------------------------------------------------------------------
 @api.get("/health", response_model=HealthResponse, tags=["Health"])
 async def api_health():
-    is_loaded = generator is not None and getattr(generator, "model", None) is not None
+    is_loaded = generator is not None and (
+        getattr(generator, "model", None) is not None or
+        getattr(generator, "torch_model", None) is not None
+    )
     return HealthResponse(
         status="healthy" if is_loaded else "model_not_loaded",
         model_loaded=is_loaded,
     )
 
+@api.get("/diag", tags=["Health"])
+async def api_diag():
+    """Simple diagnostics to see what the server sees on Railway."""
+    def exists(p: Path): return p.exists() and p.is_file()
+    model_pt = MODEL_DIR / "model.pt"
+    model_h5 = MODEL_DIR / "model.h5"
+    cfg_path = MODEL_DIR / "config.json"
+    tok_json = MODEL_DIR / "tokenizer.json"
+    tok_pkl  = MODEL_DIR / "tokenizer.pkl"
+
+    return {
+        "cwd": str(Path.cwd()),
+        "here": str(HERE),
+        "model_dir": str(MODEL_DIR),
+        "files": {
+            "model.pt": exists(model_pt),
+            "model.h5": exists(model_h5),
+            "config.json": exists(cfg_path),
+            "tokenizer.json": exists(tok_json),
+            "tokenizer.pkl": exists(tok_pkl),
+        },
+        "generator_present": generator is not None,
+        "has_model_attr": getattr(generator, "model", None) is not None if generator else False,
+        "has_torch_model_attr": getattr(generator, "torch_model", None) is not None if generator else False,
+    }
+
 @api.get("/model-info", response_model=ModelInfo, tags=["Model"])
 async def get_model_info():
-    if generator is None or generator.model is None:
+    if generator is None or (generator.model is None and getattr(generator, "torch_model", None) is None):
         raise HTTPException(status_code=503, detail="Model not loaded")
     if generator.config is None:
         raise HTTPException(status_code=500, detail="Model config not available")
@@ -167,7 +180,7 @@ async def get_model_info():
 
 @api.post("/generate", response_model=GenerateResponse, tags=["Generation"])
 async def generate_text(request: GenerateRequest):
-    if generator is None or generator.model is None:
+    if generator is None or (generator.model is None and getattr(generator, "torch_model", None) is None):
         raise HTTPException(status_code=503, detail="Model not loaded")
     try:
         generated = generator.generate_text(
@@ -191,7 +204,7 @@ async def generate_text(request: GenerateRequest):
 
 @api.get("/stats", tags=["Stats"])
 async def get_stats():
-    if generator is None or generator.model is None:
+    if generator is None or (generator.model is None and getattr(generator, "torch_model", None) is None):
         raise HTTPException(status_code=503, detail="Model not loaded")
     if generator.config is None:
         raise HTTPException(status_code=500, detail="Model config not available")
