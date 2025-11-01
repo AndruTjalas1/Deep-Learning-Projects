@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TextGenerator from './components/TextGenerator';
 import ModelInfo from './components/ModelInfo';
-import { rnnApi as api } from './services/rnnApi';   // ✅ correct API client
+import { rnnApi as api } from './services/rnnApi';
 import './App.css';
 
 function App() {
@@ -16,8 +16,8 @@ function App() {
 
   const checkConnection = async () => {
     try {
-      await api.health();   // ✅ FIXED HERE (healthCheck → health)
-      setIsConnected(true);
+      const h = await api.health();
+      setIsConnected(h?.status === 'healthy' || h?.model_loaded === true);
       setConnectionError('');
     } catch (error) {
       setIsConnected(false);

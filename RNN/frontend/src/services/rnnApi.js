@@ -1,4 +1,5 @@
 // RNN/frontend/src/services/rnnApi.js
+// Create React App env var (Option A) or Vercel rewrite (Option B) fallback.
 const base = (process.env.REACT_APP_API_BASE || "/api").replace(/\/+$/, "");
 
 async function get(path) {
@@ -16,11 +17,26 @@ async function post(path, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`POST ${path} failed: ${res.status} ${text}`);
+  }
   return res.json();
 }
 
 export const rnnApi = {
   health: () => get("/api/health"),
-  generate: (payload) => post("/api/generate", payload),
+  modelInfo: () => get("/api/model-info"),
+
+  // Frontend-friendly inputs → FastAPI schema
+  generate: ({ seed, words, temperature, topK = 0, topP = 0, useBeam = false, beamWidth = 3 }) =>
+    post("/api/generate", {
+      seed_text: seed,
+      num_words: Number(words),
+      temperature: Number(temperature),
+      top_k: Number(topK) || 0,
+      top_p: Number(topP) || 0,
+      use_beam_search: !!useBeam,
+      beam_width: Number(beamWidth) || 3,
+    }),
 };
