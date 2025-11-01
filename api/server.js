@@ -4,39 +4,49 @@ import cors from "cors";
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors({
-  origin: [
-    "https://cst-435-react.vercel.app",
-    "https://cst-435-react-b7fbctswi-tatums-projects-965c11b1.vercel.app",
-    "http://localhost:5173"
-  ],
-  methods: ["GET","POST","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"]
-}));
+// Allow all origins (fixes Vercel deploy subdomain changes)
+app.use(cors());
 app.use(express.json());
 
 // --- HEALTH ---
 app.get("/api/", (req, res) => res.json({ status: "healthy", service: "rnn-api" }));
-app.get("/api",  (req, res) => res.json({ status: "healthy", service: "rnn-api" })); // <— added
+app.get("/api",  (req, res) => res.json({ status: "healthy", service: "rnn-api" }));
 app.get("/api/health", (req, res) => res.json({ status: "healthy", service: "rnn-api" }));
 
-// --- MODEL INFO (support both styles your UI might use) ---
+// --- MODEL INFO ---
 app.get("/api/model-info", (req, res) => {
-  res.json({ name: "RNN-LSTM", backend: "node", vocab_size: 30000 });
+  res.json({
+    name: "RNN-LSTM",
+    backend: "node",
+    vocab_size: 30000,
+    sequence_length: 25,
+    embedding_dim: 128,
+    lstm_units: 256
+  });
 });
 app.get("/api/model/info", (req, res) => {
-  res.json({ name: "RNN-LSTM", backend: "node", vocab_size: 30000 });
+  res.json({
+    name: "RNN-LSTM",
+    backend: "node",
+    vocab_size: 30000,
+    sequence_length: 25,
+    embedding_dim: 128,
+    lstm_units: 256
+  });
 });
 
-// --- GENERATE ---
+// --- GENERATE (stub) ---
 app.post("/api/generate", (req, res) => {
   const { seed_text = "", num_words = 20, temperature = 1.0 } = req.body || {};
-  const text = `${seed_text} ...generated (${num_words} @ temp=${temperature})`;
-  res.json({ text });
+  res.json({ text: `${seed_text} ...generated (${num_words} words @ temp=${temperature})` });
 });
 
-// --- OPTIONAL: stats & tiny placeholder plot ---
-app.get("/api/stats", (req, res) => res.json({ uptime_s: Math.round(process.uptime()) }));
+// --- OPTIONAL: Stats ---
+app.get("/api/stats", (req, res) => {
+  res.json({ uptime_s: Math.round(process.uptime()) });
+});
+
+// --- OPTIONAL: training plot placeholder ---
 app.get("/api/visualizations/training", (req, res) => {
   const png = Buffer.from(
     "89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000000A49444154789C6360000002000154A24F920000000049454E44AE426082",
@@ -46,7 +56,7 @@ app.get("/api/visualizations/training", (req, res) => {
   res.send(png);
 });
 
-// Optional hello endpoint you had:
+// hello endpoint
 app.get("/api/hello", (req, res) => res.json({ message: "Hello from Railway API!" }));
 
 app.listen(PORT, () => console.log(`API listening on :${PORT}`));
