@@ -2,22 +2,23 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 python-multipart==0.0.6
-pydantic>=2.9.0
+pydantic==2.12.3
 python-dotenv==1.0.0
 requests==2.31.0
 beautifulsoup4==4.12.2
 
-# ---- Deep Learning (CPU) ----
-tensorflow-cpu==2.20.0     # has cp313
-tensorboard==2.20.0
-numpy>=2.1.0               # required for Python 3.13 (ml-dtypes dependency)
-torch>=2.0.0               # PyTorch CPU (add this line)
+# ---- Core compute ----
+numpy==1.24.3
+pandas==2.2.3
 
-# ---- DataFrame (needs cp313 wheel) ----
-pandas==2.2.3               # 2.2.3 publishes cp313 wheels
+# ---- PyTorch CPU ----
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+torchaudio==2.2.2+cpu
 
 # ---- Viz ----
-matplotlib>=3.9.0
+matplotlib==3.10.7
 seaborn==0.13.1
 plotly==5.18.0
 
