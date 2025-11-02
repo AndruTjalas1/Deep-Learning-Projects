@@ -25,7 +25,7 @@ from models import (
 )
 
 # -------------------------------------------------------------------
-# App + CORS  (✅ FULLY FIXED FOR VERCEL + RAILWAY)
+# App + CORS (unchanged)
 # -------------------------------------------------------------------
 app = FastAPI(
     title="RNN Text Generator API",
@@ -39,8 +39,8 @@ ALLOWED_ORIGINS = [
     "https://cst-435-react.vercel.app",
     "https://cst-435-react-git-main-tatums-projects-965c11b1.vercel.app",
     "https://cst-435-react-n8pzza1hs-tatums-projects-965c11b1.vercel.app",
+    "http://localhost:5173",
 ]
-
 ORIGIN_REGEX = r"^https://cst-435-react(?:-[a-z0-9]+)?-tatums-projects-965c11b1\.vercel\.app$"
 
 app.add_middleware(
@@ -56,30 +56,68 @@ app.add_middleware(
 api = APIRouter(prefix="/api")
 
 # -------------------------------------------------------------------
-# Model Setup
+# Model Setup (minimal changes)
 # -------------------------------------------------------------------
 generator: TextGenerator | None = None
 
-HERE = Path(__file__).parent
-MODEL_DIR = (HERE / "saved_models").resolve()
+HERE = Path(__file__).parent.resolve()
+
+def _candidate_model_dirs():
+    env_dir = os.getenv("RNN_MODEL_DIR")
+    paths = []
+    if env_dir:
+        paths.append(Path(env_dir).expanduser().resolve())
+    # common fallbacks (keep your original expectation first)
+    paths += [
+        (HERE / "saved_models").resolve(),            # RNN/backend/app/saved_models
+        (HERE.parent / "saved_models").resolve(),     # RNN/backend/saved_models
+        (HERE.parent.parent / "saved_models").resolve(),  # RNN/saved_models
+        (Path.cwd() / "saved_models").resolve(),      # working dir fallback
+    ]
+    # de-dup
+    seen, out = set(), []
+    for p in paths:
+        if p not in seen:
+            out.append(p); seen.add(p)
+    return out
+
+def _pick_model_dir():
+    searched = []
+    for d in _candidate_model_dirs():
+        searched.append(str(d))
+        if d.is_dir():
+            # require at least config + tokenizer to consider it a model dir
+            if (d / "config.json").exists() and (d / "tokenizer.json").exists():
+                print("[BOOT] Using model directory:", d, flush=True)
+                return d
+    print("[BOOT] Model dir not found. Searched:", searched, flush=True)
+    return None
+
+MODEL_DIR = _pick_model_dir()
 
 @app.on_event("startup")
 async def load_model():
     global generator
     try:
-        print("[BOOT] Expected model directory:", MODEL_DIR)
+        print("[BOOT] Expected model directory:", MODEL_DIR, flush=True)
+        if MODEL_DIR is None:
+            raise FileNotFoundError("No candidate model directory contained required files")
+
         model_pt = MODEL_DIR / "model.pt"
         model_h5 = MODEL_DIR / "model.h5"
         cfg_path = MODEL_DIR / "config.json"
         tok_json = MODEL_DIR / "tokenizer.json"
         tok_pkl  = MODEL_DIR / "tokenizer.pkl"
 
-        print("[BOOT] Exists?",
-              "model.pt:", model_pt.exists(),
-              "| model.h5:", model_h5.exists(),
-              "| config.json:", cfg_path.exists(),
-              "| tokenizer.json:", tok_json.exists(),
-              "| tokenizer.pkl:", tok_pkl.exists())
+        print(
+            "[BOOT] Exists?",
+            "model.pt:", model_pt.exists(),
+            "| model.h5:", model_h5.exists(),
+            "| config.json:", cfg_path.exists(),
+            "| tokenizer.json:", tok_json.exists(),
+            "| tokenizer.pkl:", tok_pkl.exists(),
+            flush=True,
+        )
 
         if not cfg_path.exists():
             raise FileNotFoundError("config.json missing → Model cannot load")
@@ -97,20 +135,20 @@ async def load_model():
         )
         generator.config = cfg
 
-        print(f"[BOOT] Loading model from {MODEL_DIR} …")
+        print(f"[BOOT] Loading model from {MODEL_DIR} …", flush=True)
         generator.load_model(str(MODEL_DIR))
 
         if getattr(generator, "model", None) is None and getattr(generator, "torch_model", None) is None:
             raise RuntimeError("Model object missing after load → check TextGenerator.load_model()")
 
-        print("✅ MODEL LOADED SUCCESSFULLY")
+        print("✅ MODEL LOADED SUCCESSFULLY", flush=True)
 
-    except Exception as e:
-        print("❌ MODEL LOAD FAILED")
-        print(traceback.format_exc())
+    except Exception:
+        print("❌ MODEL LOAD FAILED", flush=True)
+        print(traceback.format_exc(), flush=True)
 
 # -------------------------------------------------------------------
-# API ROUTES
+# API ROUTES (unchanged + small alias)
 # -------------------------------------------------------------------
 @api.get("/health", response_model=HealthResponse)
 async def health():
@@ -133,6 +171,11 @@ async def model_info():
         num_layers=cfg["num_lstm_layers"],
         is_loaded=True,
     )
+
+# compatibility alias if frontend calls /model/info
+@app.get("/model/info")
+async def model_info_alias():
+    return await model_info()
 
 @api.post("/generate", response_model=GenerateResponse)
 async def generate_text(request: GenerateRequest):
