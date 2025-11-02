@@ -1,13 +1,13 @@
 [build]
-builder = "NIXPACKS"
+builder = "railpack/v1"
+
+[phases.install]
+workdir = "RNN/backend"
+cmds = ["pip install -r requirements.txt"]
+
+[phases.start]
+workdir = "RNN/backend"
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 [deploy]
-# Run FastAPI from the backend folder
-startCommand = "bash -lc \"cd RNN/backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT\""
-healthcheckPath = "/api/health"
-restartPolicyType = "on_failure"
-
-[variables]
-# Force a Python version that has wheels for TF/pandas
-PYTHON_VERSION = "3.12"
-NIXPACKS_PYTHON_VERSION = "3.12"
+restartPolicyType = "ON_FAILURE"
