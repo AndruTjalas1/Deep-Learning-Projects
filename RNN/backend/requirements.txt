@@ -11,6 +11,7 @@ beautifulsoup4==4.12.2
 tensorflow-cpu==2.20.0     # has cp313
 tensorboard==2.20.0
 numpy>=2.1.0               # required for Python 3.13 (ml-dtypes dependency)
+torch>=2.0.0               # PyTorch CPU (add this line)
 
 # ---- DataFrame (needs cp313 wheel) ----
 pandas==2.2.3               # 2.2.3 publishes cp313 wheels
