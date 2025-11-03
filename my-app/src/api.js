@@ -9,19 +9,19 @@ export const http = axios.create({
   withCredentials: true,
 });
 
-// ✅ remove /api prefix from all endpoints below
+// ✅ REMOVE leading slashes - use relative paths with baseURL
 
 export async function healthCheck() {
-  const { data } = await http.get("/health");
+  const { data } = await http.get("health");  // was "/health"
   return data;
 }
 
 export async function getModelInfo() {
-  const { data } = await http.get("/model-info");
+  const { data } = await http.get("model-info");  // was "/model-info"
   return data;
 }
 
 export async function generateText(payload) {
-  const { data } = await http.post("/generate", payload);
+  const { data } = await http.post("generate", payload);  // was "/generate"
   return data;
 }
