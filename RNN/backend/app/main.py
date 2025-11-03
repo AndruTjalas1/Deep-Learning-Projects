@@ -1,3 +1,7 @@
+"""
+FastAPI application for serving the RNN text generation model
+Provides REST API endpoints for text generation and model information
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,10 @@ from pathlib import Path
 import traceback
 import json
 from typing import Optional, List, Dict, Any
+
+# NEW: performance-related imports
+import multiprocessing
+import torch
 
 # Ensure local imports work (text_generator.py, models.py live one level up from this file)
 HERE = Path(__file__).parent.resolve()            # rnn/backend/app
@@ -36,7 +44,7 @@ app = FastAPI(
 )
 
 # ------------------------------------------------------------
-# ✅ ADDING REQUEST LOGGING FOR /generate (THIS WAS THE PART YOU NEEDED)
+# ✅ REQUEST LOGGING FOR /generate (debug)
 # ------------------------------------------------------------
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -49,6 +57,26 @@ async def log_requests(request: Request, call_next):
     return await call_next(request)
 
 # ------------------------------------------------------------
+# ✅ PYTORCH CPU PERFORMANCE TUNING (BIG SPEED WIN ON SMALL vCPUs)
+# ------------------------------------------------------------
+CPU_CORES = multiprocessing.cpu_count()
+# Allow override via env if you want to tweak
+NUM_THREADS = int(os.getenv("TORCH_NUM_THREADS", max(1, min(4, CPU_CORES // 2))))
+NUM_INTEROP = int(os.getenv("TORCH_NUM_INTEROP", max(1, min(4, CPU_CORES // 2))))
+
+try:
+    torch.set_num_threads(NUM_THREADS)
+    torch.set_num_interop_threads(NUM_INTEROP)
+    print(f"[OPT] torch threads set: num_threads={NUM_THREADS}, interop={NUM_INTEROP}", flush=True)
+except Exception as e:
+    print("[OPT] Unable to set torch thread counts:", e, flush=True)
+
+# Prefer faster matmul if supported (PyTorch 2.x)
+try:
+    torch.set_float32_matmul_precision("high")
+    print("[OPT] float32 matmul precision set to 'high'", flush=True)
+except Exception as e:
+    print("[OPT] matmul precision hint skipped:", e, flush=True)
 
 ALLOWED_ORIGINS: List[str] = [
     "https://cst-435-react.vercel.app",
@@ -180,6 +208,16 @@ async def load_model() -> None:
         if getattr(generator, "model", None) is None and getattr(generator, "torch_model", None) is None:
             raise RuntimeError("Model object missing after load")
 
+        # ✅ NEW: try to optimize for inference (compile + warm-up) if implemented
+        try:
+            if hasattr(generator, "optimize_for_inference"):
+                generator.optimize_for_inference()
+                print("[OPT] optimize_for_inference completed", flush=True)
+            else:
+                print("[OPT] optimize_for_inference not implemented in TextGenerator (skipping)", flush=True)
+        except Exception as e:
+            print("[OPT] optimize_for_inference skipped:", e, flush=True)
+
         print("✅ MODEL LOADED SUCCESSFULLY", flush=True)
 
     except Exception:
@@ -262,6 +300,10 @@ async def stats():
         "model_loaded": _ready(),
         "vocab_size": (cfg or {}).get("vocab_size"),
         "sequence_length": (cfg or {}).get("sequence_length"),
+        "threads": {
+            "num_threads": NUM_THREADS,
+            "interop_threads": NUM_INTEROP,
+        },
     }
 
 app.include_router(api)
