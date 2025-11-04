@@ -5,7 +5,7 @@ import P1 from "./pages/P1.jsx";
 import P2 from "./pages/P2.jsx";
 import P3 from "./pages/P3.jsx";
 import P4 from "./pages/P4.jsx";
-import P5_RNN from "./pages/P5.jsx";
+import P5 from "./pages/P5.jsx";
 import P6 from "./pages/P6.jsx";
 import P7 from "./pages/P7.jsx";
 import P8 from "./pages/P8.jsx";
