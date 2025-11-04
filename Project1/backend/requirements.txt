@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+python-multipart
+# add any libs your MethodFiles need:
+numpy
+matplotlib
+plotly
+pillow
