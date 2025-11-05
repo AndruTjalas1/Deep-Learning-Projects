@@ -21,7 +21,7 @@ export default function App() {
           <Route path="/p2" element={<P2 />} />
           <Route path="/p3" element={<P3 />} />
           <Route path="/p4" element={<P4 />} />
-          <Route path="/p5" element={<P5_RNN />} />
+          <Route path="/p5" element={<P5 />} />   {/* ✅ FIXED */}
           <Route path="/p6" element={<P6 />} />
           <Route path="/p7" element={<P7 />} />
           <Route path="/p8" element={<P8 />} />
