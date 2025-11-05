@@ -1,156 +1,150 @@
-from fastapi import APIRouter, HTTPException
+from __future__ import annotations
+import os
 from pathlib import Path
-from typing import Optional, Dict, Any
-import os, json, importlib
+from typing import Optional
 
-# ---- Import your Pydantic models (exactly as you provided) ----
-P5_MODELS = importlib.import_module("projects.p5.models")
-GenerateRequest = getattr(P5_MODELS, "GenerateRequest")
-GenerateResponse = getattr(P5_MODELS, "GenerateResponse")
-ModelInfo = getattr(P5_MODELS, "ModelInfo")
-HealthResponse = getattr(P5_MODELS, "HealthResponse")
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 
-router = APIRouter(prefix="/api/p5", tags=["p5 (RNN)"])
+# Your existing modules:
+from projects.p5.text_generator import TextGenerator
+from projects.p5.models import GenerateRequest, GenerateResponse, ModelInfo
 
-# Lazy singletons
-_generator = None
-_cfg: Optional[Dict[str, Any]] = None
-_MODEL_DIR: Optional[Path] = None
+router = APIRouter(prefix="/api/p5", tags=["project-5"])
+
+# ------------ config ------------
+MODEL_DIR = os.getenv("MODEL_DIR", "projects/p5/saved_models")
+MODEL_DIR_PATH = Path(MODEL_DIR).resolve()
+
+# Single shared generator (lazy)
+_gen: Optional[TextGenerator] = None
+_model_loaded: bool = False
+_last_error: Optional[str] = None
 
 
-# --------------------------- Model dir helpers ---------------------------
-def _candidate_model_dirs():
-    env_dir = os.getenv("MODEL_DIR") or os.getenv("RNN_MODEL_DIR")
-    here = Path(__file__).resolve()
-    out = []
-    if env_dir:
-        out.append(Path(env_dir).expanduser().resolve())
-    out += [
-        here.parents[2] / "projects" / "p5" / "saved_models",
-        Path.cwd() / "saved_models",
-    ]
-    # de-dupe
-    seen, uniq = set(), []
-    for p in (d.resolve() for d in out):
-        s = str(p)
-        if s not in seen:
-            seen.add(s)
-            uniq.append(p)
-    return uniq
-
-def _pick_model_dir() -> Optional[Path]:
-    for d in _candidate_model_dirs():
-        if d.is_dir() and (d / "config.json").exists() and (d / "tokenizer.json").exists():
-            return d
-    return None
-
-def _is_lfs_pointer(path: Path) -> bool:
+def _is_lfs_pointer(p: Path) -> bool:
     try:
-        with path.open("rb") as f:
-            head = f.read(64)
+        head = p.read_bytes()[:64]
         return head.startswith(b"version https://git-lfs.github.com/spec/v1")
     except Exception:
         return False
 
 
-# ------------------------------ Loader -----------------------------------
-def _ensure_loaded():
-    """
-    Lazy-loads config, tokenizer, and model weights using your TextGenerator.
-    Assumes model.pt is a PyTorch state_dict (as your save_model() writes).
-    """
-    global _generator, _cfg, _MODEL_DIR
-    if _generator is not None:
+def _load_model_if_needed() -> None:
+    global _gen, _model_loaded, _last_error
+    if _model_loaded:
         return
 
-    _MODEL_DIR = _pick_model_dir()
-    if _MODEL_DIR is None:
-        raise HTTPException(503, "Model directory not found (need config.json + tokenizer.json).")
-
-    cfg_path = _MODEL_DIR / "config.json"
-    weights_path = _MODEL_DIR / "model.pt"
-
-    if not cfg_path.exists():
-        raise HTTPException(503, f"Missing config.json at {_MODEL_DIR}")
-    if not weights_path.exists():
-        raise HTTPException(503, f"Missing model.pt at {_MODEL_DIR}")
-    if _is_lfs_pointer(weights_path):
-        raise HTTPException(500, "model.pt is a Git LFS pointer; run `git lfs pull` in deploy.")
-
-    _cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-
-    # Import your generator only when needed (keeps cold starts lighter)
-    from projects.p5.text_generator import TextGenerator
-
-    _generator = TextGenerator(
-        sequence_length=_cfg.get("sequence_length", 50),
-        embedding_dim=_cfg.get("embedding_dim", 100),
-        lstm_units=_cfg.get("lstm_units", 150),
-        num_lstm_layers=_cfg.get("num_lstm_layers", 2),
-        dropout_rate=_cfg.get("dropout_rate", 0.2),
-        # You also support these — keep defaults unless you store in config.json:
-        recurrent_dropout=_cfg.get("recurrent_dropout", 0.0),
-        activation_fn=_cfg.get("activation_fn", "relu"),
-        use_glove_embeddings=_cfg.get("use_glove_embeddings", False),
-        trainable_embeddings=_cfg.get("trainable_embeddings", True),
-        vocab_size=_cfg.get("vocab_size"),
-    )
-
-    # This calls your loader which:
-    #  - reads config.json (again) to refresh hyperparams
-    #  - loads tokenizer.json / tokenizer.pkl
-    #  - builds LSTMModel and loads state_dict from model.pt
-    _generator.load_model(str(_MODEL_DIR))
-
-
-# ------------------------------ Routes -----------------------------------
-@router.get("/health", response_model=HealthResponse)
-def health():
     try:
-        _ensure_loaded()
-        return HealthResponse(status="healthy", model_loaded=True)
-    except HTTPException:
-        # Don’t leak internal details to the health ping
-        return HealthResponse(status="error", model_loaded=False)
+        # Sanity on files
+        weights = MODEL_DIR_PATH / "model.pt"
+        tok = MODEL_DIR_PATH / "tokenizer.json"
+        cfg = MODEL_DIR_PATH / "config.json"
+
+        missing = [str(p.name) for p in (weights, tok, cfg) if not p.exists()]
+        if missing:
+            raise FileNotFoundError(
+                f"Missing model artifacts in {MODEL_DIR_PATH}: {', '.join(missing)}"
+            )
+
+        if _is_lfs_pointer(weights):
+            raise RuntimeError(
+                f"{weights} appears to be a Git LFS pointer, not real weights. "
+                "Ensure Railway build pulls LFS blobs: `git lfs install && git lfs pull`."
+            )
+
+        # Create and load
+        _gen = TextGenerator()
+        _gen.load_model(str(MODEL_DIR_PATH))
+        _model_loaded = True
+        _last_error = None
+        print(f"[p5] Model loaded from {MODEL_DIR_PATH}")
+    except Exception as e:
+        _model_loaded = False
+        _last_error = f"{type(e).__name__}: {e}"
+        # Keep stderr log detailed; API returns safe message
+        print(f"[p5] Failed to load model: {_last_error}")
+
+
+# ----------- routes ------------
+
+@router.get("/health")
+def health():
+    # Try loading once if not loaded
+    if not _model_loaded:
+        _load_model_if_needed()
+    return {
+        "status": "ok" if _model_loaded else "not-ready",
+        "model_loaded": _model_loaded,
+        "model_dir": str(MODEL_DIR_PATH),
+        "last_error": _last_error,
+    }
+
+
+@router.post("/warmup")
+def warmup():
+    """Force load the model and return status."""
+    _load_model_if_needed()
+    if not _model_loaded:
+        raise HTTPException(status_code=500, detail=_last_error or "Unknown load error")
+    return {"ok": True, "model_loaded": True, "model_dir": str(MODEL_DIR_PATH)}
+
 
 @router.get("/model-info", response_model=ModelInfo)
 def model_info():
-    _ensure_loaded()
-    cfg = _cfg or {}
+    if not _model_loaded:
+        _load_model_if_needed()
+    if not _model_loaded or _gen is None or _gen.model is None:
+        # Return a helpful error but as 503 (unavailable)
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_last_error or "Model not loaded yet."
+        )
+
+    # Build a ModelInfo from the generator’s config
+    vocab_size = (
+        (len(getattr(_gen.tokenizer, "word_index", {})) + 1)
+        if getattr(_gen, "tokenizer", None) and getattr(_gen.tokenizer, "word_index", None)
+        else (_gen.vocab_size or 0)
+    )
     return ModelInfo(
-        vocabulary_size=cfg.get("vocab_size") or 0,
-        sequence_length=cfg.get("sequence_length") or 0,
-        embedding_dim=cfg.get("embedding_dim") or 0,
-        lstm_units=cfg.get("lstm_units") or 0,
-        num_layers=cfg.get("num_lstm_layers") or 0,
+        vocabulary_size=int(vocab_size),
+        sequence_length=int(getattr(_gen, "sequence_length", 0) or 0),
+        embedding_dim=int(getattr(_gen, "embedding_dim", 0) or 0),
+        lstm_units=int(getattr(_gen, "lstm_units", 0) or 0),
+        num_layers=int(getattr(_gen, "num_lstm_layers", 0) or 0),
         is_loaded=True,
     )
 
+
 @router.post("/generate", response_model=GenerateResponse)
-def generate_text(request: GenerateRequest):
-    _ensure_loaded()
+def generate(req: GenerateRequest):
+    if not _model_loaded:
+        _load_model_if_needed()
+    if not _model_loaded or _gen is None or _gen.model is None:
+        # 503 here is what you saw; include actionable detail
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_last_error or "Model not loaded. Check /api/p5/health and MODEL_DIR."
+        )
 
-    # Your models.py allows top_k=0 and top_p=1.0 — interpret these as “disable”.
-    top_k = None if (request.top_k is not None and request.top_k <= 0) else request.top_k
-    top_p = None if (request.top_p is not None and request.top_p >= 1.0) else request.top_p
-
-    # Call your generator with exactly the parameters it supports.
-    # You also support repetition_penalty & diversity_boost; keep your defaults unless you add them to the request model.
-    text = _generator.generate_text(
-        seed_text=request.seed_text,
-        num_words=request.num_words,
-        temperature=request.temperature,
-        top_k=top_k if top_k is not None else 40,
-        top_p=top_p if top_p is not None else 0.92,
-        use_beam_search=request.use_beam_search,
-        beam_width=request.beam_width,
-        # repetition_penalty=2.5,
-        # diversity_boost=1.0,
-    )
-
-    return GenerateResponse(
-        seed_text=request.seed_text,
-        generated_text=text,
-        num_words_generated=max(0, len(text.split()) - len(request.seed_text.split())),
-        temperature=request.temperature,
-    )
+    try:
+        text = _gen.generate_text(
+            seed_text=req.seed_text,
+            num_words=req.num_words,
+            temperature=req.temperature,
+            top_k=req.top_k,
+            top_p=req.top_p,
+            use_beam_search=req.use_beam_search,
+            beam_width=req.beam_width,
+        )
+        return GenerateResponse(
+            seed_text=req.seed_text,
+            generated_text=text,
+            num_words_generated=req.num_words,
+            temperature=req.temperature,
+        )
+    except Exception as e:
+        # Surface a 500 with concise error
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
