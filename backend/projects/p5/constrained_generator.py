@@ -304,7 +304,7 @@ def compare_generation_methods(text_generator, seed: str = "the", num_words: int
         num_words=num_words,
         temperature=0.8,
         top_k=50,
-        use_beam_search=True
+        use_beam_search=False
     )
     print(f"Output: {regular_output}")
     

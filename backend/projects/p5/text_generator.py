@@ -619,7 +619,7 @@ class TextGenerator:
         temperature: float = 0.8,
         top_k: int = 40,
         top_p: float = 0.85,
-        use_beam_search: bool = True,
+        use_beam_search: bool = False,
         beam_width: int = 3,
         repetition_penalty: float = 2.5,
         diversity_boost: float = 1.0,
