@@ -619,7 +619,7 @@ class TextGenerator:
         temperature: float = 0.8,
         top_k: int = 40,
         top_p: float = 0.85,
-        use_beam_search: bool = False,
+        use_beam_search: bool = True,
         beam_width: int = 3,
         repetition_penalty: float = 2.5,
         diversity_boost: float = 1.0,
@@ -796,21 +796,22 @@ class TextGenerator:
                             if self._block_repeated_ngrams(logits_masked, gen_words, idx, no_repeat_ngram_size):
                                 logits_masked[idx] = -np.inf
 
-                    exp = np.exp(logits_masked - np.max(logits_masked))
-                    probs = exp / (exp.sum() + 1e-10)
-
-                    top_idx = np.argsort(probs)[-beam_width * 2:]
+                    # Get top-k candidates deterministically (no sampling in beam search)
+                    top_k_indices = np.argsort(logits_masked)[-beam_width * 4:]
+                    top_k_logits = logits_masked[top_k_indices]
+                    
                     added = 0
-                    for idx in reversed(top_idx):
+                    for rank, idx in enumerate(reversed(top_k_indices)):
                         if added >= beam_width:
                             break
-                        p = float(probs[idx])
-                        if p <= 1e-12:
+                        logit_val = float(logits_masked[idx])
+                        if logit_val <= -1e9:  # Skip masked out tokens
                             continue
                         w = reverse_idx.get(int(idx))
                         if w and w != "<OOV>":
                             new_text = text + " " + w
-                            new_beams.append((new_text, logp + np.log(max(p, 1e-12)), word_ids + [int(idx)]))
+                            # Use logit directly as score (deterministic, greedy)
+                            new_beams.append((new_text, logp + logit_val, word_ids + [int(idx)]))
                             added += 1
 
                 new_beams = sorted(new_beams, key=lambda t: t[1], reverse=True)[:beam_width]
