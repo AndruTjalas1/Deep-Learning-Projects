@@ -12,7 +12,7 @@ __pycache__/
 *$py.class
 
 # Model files (too large)
-*.pt
+
 !RNN/backend/saved_models/model.pt
 *.pth
 

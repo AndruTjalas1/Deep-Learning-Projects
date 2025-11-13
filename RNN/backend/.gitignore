@@ -11,7 +11,7 @@ __pycache__/
 *.so
 
 # PyTorch model files (large binary files)
-*.pt
+
 *.pth
 
 # Data files
