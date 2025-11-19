@@ -1,197 +1,179 @@
-import tensorflow as tf
-from tensorflow.keras import layers, mixed_precision
-import matplotlib.pyplot as plt
-import numpy as np
 import os
-import sys
-from tqdm.auto import tqdm  # pink progress bars
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-# -------------------------------------------
-# ENABLE MIXED PRECISION (Apple Silicon)
-# -------------------------------------------
-mixed_precision.set_global_policy("mixed_float16")
-print("Mixed precision:", mixed_precision.global_policy())
+# ---------------------------------------------------------
+# DEVICE SETUP
+# ---------------------------------------------------------
+device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+print(f"Using device: {device}")
 
-# -------------------------------------------
-# LOAD CIFAR-10
-# -------------------------------------------
-(x_train, _), (_, _) = tf.keras.datasets.cifar10.load_data()
-x_train = tf.image.resize(x_train, (256, 256)).numpy()
-x_train = (x_train.astype("float32") - 127.5) / 127.5  # Normalize to [-1, 1]
+# AMP is only allowed on CUDA
+use_amp = device == "cuda"
+if device != "cuda":
+    print("⚠️ AMP disabled (not supported on MPS/CPU).")
 
-BUFFER_SIZE = 60000
-BATCH_SIZE = 256  # Fast on Apple M-series GPUs
+from torch.amp import autocast
 
-dataset = (
-    tf.data.Dataset.from_tensor_slices(x_train)
-    .cache()
-    .shuffle(BUFFER_SIZE)
-    .batch(BATCH_SIZE, drop_remainder=True)
-    .prefetch(tf.data.AUTOTUNE)
-)
+# ---------------------------------------------------------
+# HYPERPARAMETERS
+# ---------------------------------------------------------
+latent_dim = 100
+batch_size = 64
+epochs = 50
+sample_folder = "samples"
+os.makedirs(sample_folder, exist_ok=True)
 
-# -------------------------------------------
-# GENERATOR (FAST)
-# -------------------------------------------
-def build_generator():
-    inputs = layers.Input(shape=(100,))
-    x = layers.Dense(4 * 4 * 512, use_bias=False)(inputs)
-    x = layers.BatchNormalization()(x)
-    x = layers.ReLU()(x)
-    x = layers.Reshape((4, 4, 512))(x)
+# ---------------------------------------------------------
+# DATASET (MNIST)
+# ---------------------------------------------------------
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize([0.5], [0.5])
+])
 
-    x = layers.Conv2DTranspose(256, 4, strides=2, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.ReLU()(x)
+dataset = datasets.MNIST(root="./data", train=True, transform=transform, download=True)
+loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-    x = layers.Conv2DTranspose(128, 4, strides=2, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.ReLU()(x)
+# ---------------------------------------------------------
+# GENERATOR
+# ---------------------------------------------------------
+class Generator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Linear(latent_dim, 256),
+            nn.LeakyReLU(0.2, inplace=True),
 
-    x = layers.Conv2DTranspose(64, 4, strides=2, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.ReLU()(x)
+            nn.Linear(256, 512),
+            nn.LeakyReLU(0.2, inplace=True),
 
-    x = layers.Conv2DTranspose(32, 4, strides=2, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.ReLU()(x)
+            nn.Linear(512, 1024),
+            nn.LeakyReLU(0.2, inplace=True),
 
-    outputs = layers.Conv2DTranspose(3, 3, activation="tanh", padding="same")(x)
-    return tf.keras.Model(inputs, outputs)
+            nn.Linear(1024, 28 * 28),
+            nn.Tanh()
+        )
 
-# -------------------------------------------
-# DISCRIMINATOR (FAST)
-# -------------------------------------------
-def build_discriminator():
-    inputs = layers.Input(shape=(256, 256, 3))
+    def forward(self, z):
+        out = self.model(z)
+        return out.view(-1, 1, 28, 28)
 
-    x = layers.Conv2D(32, 4, strides=2, padding="same")(inputs)
-    x = layers.LeakyReLU(0.2)(x)
 
-    x = layers.Conv2D(64, 4, strides=2, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(0.2)(x)
+# ---------------------------------------------------------
+# DISCRIMINATOR
+# ---------------------------------------------------------
+class Discriminator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(28 * 28, 512),
+            nn.LeakyReLU(0.2, inplace=True),
 
-    x = layers.Conv2D(128, 4, strides=2, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(0.2)(x)
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
 
-    x = layers.Conv2D(256, 4, strides=2, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(0.2)(x)
+            nn.Linear(256, 1),
+            nn.Sigmoid()
+        )
 
-    x = layers.Conv2D(512, 4, strides=2, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(0.2)(x)
+    def forward(self, img):
+        return self.model(img)
 
-    x = layers.Flatten()(x)
-    outputs = layers.Dense(1)(x)  # logits
-    return tf.keras.Model(inputs, outputs)
 
-generator = build_generator()
-discriminator = build_discriminator()
+generator = Generator().to(device)
+discriminator = Discriminator().to(device)
 
-# -------------------------------------------
+# ---------------------------------------------------------
 # LOSS + OPTIMIZERS
-# -------------------------------------------
-loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-g_opt = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-d_opt = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+# ---------------------------------------------------------
+criterion = nn.BCELoss()
+opt_G = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+opt_D = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
-# -------------------------------------------
-# TRAINING STEP
-# -------------------------------------------
-@tf.function
-def train_step(real_images):
-    noise = tf.random.normal([BATCH_SIZE, 100])
+# ---------------------------------------------------------
+# SAVE SAMPLES
+# ---------------------------------------------------------
+def save_samples(epoch):
+    generator.eval()
+    with torch.no_grad():
+        z = torch.randn(25, latent_dim).to(device)
+        fake_imgs = generator(z).cpu()
 
-    # Train discriminator
-    with tf.GradientTape() as tape:
-        fake_images = generator(noise, training=True)
-        real_out = discriminator(real_images, training=True)
-        fake_out = discriminator(fake_images, training=True)
+    fig, axes = plt.subplots(5, 5, figsize=(5, 5))
+    idx = 0
+    for i in range(5):
+        for j in range(5):
+            axes[i, j].imshow(fake_imgs[idx].squeeze(), cmap="gray")
+            axes[i, j].axis("off")
+            idx += 1
 
-        d_loss_real = loss_fn(tf.ones_like(real_out), real_out)
-        d_loss_fake = loss_fn(tf.zeros_like(fake_out), fake_out)
-        d_loss = d_loss_real + d_loss_fake
-
-    d_grads = tape.gradient(d_loss, discriminator.trainable_variables)
-    d_opt.apply_gradients(zip(d_grads, discriminator.trainable_variables))
-
-    # Train generator
-    with tf.GradientTape() as tape:
-        noise = tf.random.normal([BATCH_SIZE, 100])
-        fake_images = generator(noise, training=True)
-        fake_out = discriminator(fake_images, training=True)
-        g_loss = loss_fn(tf.ones_like(fake_out), fake_out)
-
-    g_grads = tape.gradient(g_loss, generator.trainable_variables)
-    g_opt.apply_gradients(zip(g_grads, generator.trainable_variables))
-
-    return g_loss, d_loss
-
-# -------------------------------------------
-# IMAGE & MODEL SAVING
-# -------------------------------------------
-seed = tf.random.normal([25, 100])
-
-def save_images(epoch):
-    preds = generator(seed, training=False)
-    preds = tf.cast((preds + 1) / 2.0, tf.float32).numpy()
-
-    fig = plt.figure(figsize=(5, 5))
-    for i in range(25):
-        plt.subplot(5, 5, i + 1)
-        plt.imshow(preds[i])
-        plt.axis("off")
-
-    os.makedirs("samples", exist_ok=True)
     plt.tight_layout()
-    plt.savefig(f"samples/epoch_{epoch}.png")
+    plt.savefig(f"{sample_folder}/epoch_{epoch}.png")
     plt.close()
+    generator.train()
 
-def save_models(epoch):
-    os.makedirs("models", exist_ok=True)
-    generator.save(f"models/generator_epoch_{epoch}.h5")
-    discriminator.save(f"models/discriminator_epoch_{epoch}.h5")
-    print(f"Saved milestone models at epoch {epoch}")
 
-# -------------------------------------------
-# TRAIN LOOP WITH ALWAYS-VISIBLE PINK PROGRESS BAR 🌸
-# -------------------------------------------
-EPOCHS = 10
-milestones = [1, 5, 10]
+# ---------------------------------------------------------
+# TRAINING LOOP
+# ---------------------------------------------------------
+print("\nStarting Training...\n")
 
-for epoch in range(1, EPOCHS + 1):
-    print(f"\n🌸 Epoch {epoch}/{EPOCHS}")
+for epoch in range(1, epochs + 1):
+    pbar = tqdm(loader, desc=f"Epoch {epoch}/{epochs}", colour="magenta")
 
-    progress = tqdm(
-        dataset,
-        desc=f"🌸 Training Epoch {epoch}",
-        colour="magenta",
-        file=sys.stdout,       # ensures visibility
-        dynamic_ncols=True,    # adjusts to terminal width
-        leave=False
-    )
+    for real_imgs, _ in pbar:
+        real_imgs = real_imgs.to(device)
+        batch = real_imgs.size(0)
 
-    for real_batch in progress:
-        g_loss, d_loss = train_step(real_batch)
-        progress.set_postfix({
-            "G_loss": float(g_loss),
-            "D_loss": float(d_loss)
-        })
+        real_labels = torch.ones(batch, 1).to(device)
+        fake_labels = torch.zeros(batch, 1).to(device)
 
-    print(f" ✔ Finished Epoch {epoch} | G Loss: {g_loss:.4f} | D Loss: {d_loss:.4f}")
+        # -------------------------
+        # TRAIN DISCRIMINATOR
+        # -------------------------
+        z = torch.randn(batch, latent_dim).to(device)
+        fake_imgs = generator(z)
 
-    # ------------------------------
-    # SAMPLE SAVING: every 10 epochs
-    # ------------------------------
+        if use_amp:
+            with autocast(device_type="cuda"):
+                real_output = discriminator(real_imgs)
+                fake_output = discriminator(fake_imgs.detach())
+                d_loss = criterion(real_output, real_labels) + criterion(fake_output, fake_labels)
+        else:
+            real_output = discriminator(real_imgs)
+            fake_output = discriminator(fake_imgs.detach())
+            d_loss = criterion(real_output, real_labels) + criterion(fake_output, fake_labels)
+
+        opt_D.zero_grad()
+        d_loss.backward()
+        opt_D.step()
+
+        # -------------------------
+        # TRAIN GENERATOR
+        # -------------------------
+        if use_amp:
+            with autocast(device_type="cuda"):
+                fake_output = discriminator(fake_imgs)
+                g_loss = criterion(fake_output, real_labels)
+        else:
+            fake_output = discriminator(fake_imgs)
+            g_loss = criterion(fake_output, real_labels)
+
+        opt_G.zero_grad()
+        g_loss.backward()
+        opt_G.step()
+
+        pbar.set_postfix(G=float(g_loss), D=float(d_loss))
+
+    # Save sample every 10 epochs
     if epoch % 10 == 0:
-        save_images(epoch)
+        save_samples(epoch)
 
-    # --------------------------------------
-    # MODEL SAVING: only at milestone epochs
-    # --------------------------------------
-    if epoch in milestones:
-        save_models(epoch)
-        save_images(epoch)  # also save sample at milestone
+print("Training complete!")
