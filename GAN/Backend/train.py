@@ -6,12 +6,39 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import platform
 
 # -------------------------------------------------------------
-# DEVICE
+# DEVICE SELECTION - Cross-Platform GPU/CPU Support
 # -------------------------------------------------------------
-device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
+def get_device():
+    """
+    Intelligently select device for training:
+    - Windows: CUDA (GPU) if available, else CPU
+    - Mac: MPS (GPU) if available, else CPU
+    - Linux: CUDA (GPU) if available, else CPU
+    """
+    system = platform.system()
+    
+    if system == "Darwin":  # macOS
+        if torch.backends.mps.is_available():
+            return "mps"
+    elif system == "Windows":  # Windows
+        if torch.cuda.is_available():
+            return "cuda"
+    else:  # Linux and others
+        if torch.cuda.is_available():
+            return "cuda"
+    
+    return "cpu"
+
+device = get_device()
+print(f"Platform: {platform.system()}")
 print(f"Using device: {device}")
+if device == "cuda":
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+elif device == "mps":
+    print("GPU: Apple Metal Performance Shaders (MPS)")
 
 # -------------------------------------------------------------
 # DATASET: CIFAR-10 (animals + automobile + truck)
