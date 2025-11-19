@@ -26,7 +26,7 @@ from torch.amp import autocast
 latent_dim = 100
 batch_size = 64
 epochs = 50
-sample_folder = "samples"
+sample_folder = "samples2"
 os.makedirs(sample_folder, exist_ok=True)
 
 # ---------------------------------------------------------
