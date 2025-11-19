@@ -2,178 +2,194 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-# ---------------------------------------------------------
-# DEVICE SETUP
-# ---------------------------------------------------------
-device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+# -------------------------------------------------------------
+# DEVICE
+# -------------------------------------------------------------
+device = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-# AMP is only allowed on CUDA
-use_amp = device == "cuda"
-if device != "cuda":
-    print("⚠️ AMP disabled (not supported on MPS/CPU).")
-
-from torch.amp import autocast
-
-# ---------------------------------------------------------
-# HYPERPARAMETERS
-# ---------------------------------------------------------
-latent_dim = 100
-batch_size = 64
-epochs = 50
-sample_folder = "samples2"
-os.makedirs(sample_folder, exist_ok=True)
-
-# ---------------------------------------------------------
-# DATASET (MNIST)
-# ---------------------------------------------------------
+# -------------------------------------------------------------
+# DATASET: CIFAR-10 (animals + automobile + truck)
+# -------------------------------------------------------------
 transform = transforms.Compose([
+    transforms.Resize(64),
     transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5])
+    transforms.Normalize((0.5,), (0.5,))
 ])
 
-dataset = datasets.MNIST(root="./data", train=True, transform=transform, download=True)
-loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+dataset = datasets.CIFAR10(
+    root="./data",
+    train=True,
+    transform=transform,
+    download=True
+)
 
-# ---------------------------------------------------------
+dataloader = DataLoader(dataset, batch_size=128, shuffle=True, num_workers=0)
+
+# -------------------------------------------------------------
 # GENERATOR
-# ---------------------------------------------------------
+# -------------------------------------------------------------
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, latent_dim):
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(latent_dim, 256),
-            nn.LeakyReLU(0.2, inplace=True),
+        self.net = nn.Sequential(
+            nn.Linear(latent_dim, 8 * 8 * 256),
+            nn.BatchNorm1d(8 * 8 * 256),
+            nn.ReLU(True),
 
-            nn.Linear(256, 512),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.Unflatten(1, (256, 8, 8)),
 
-            nn.Linear(512, 1024),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
 
-            nn.Linear(1024, 28 * 28),
-            nn.Tanh()
+            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(64, 3, 4, stride=2, padding=1),
+            nn.Tanh(),
         )
 
     def forward(self, z):
-        out = self.model(z)
-        return out.view(-1, 1, 28, 28)
+        return self.net(z)
 
 
-# ---------------------------------------------------------
+# -------------------------------------------------------------
 # DISCRIMINATOR
-# ---------------------------------------------------------
+# -------------------------------------------------------------
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
-        self.model = nn.Sequential(
+        self.net = nn.Sequential(
+            nn.Conv2d(3, 64, 4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 128, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 256, 4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
             nn.Flatten(),
-            nn.Linear(28 * 28, 512),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Linear(512, 256),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Linear(256, 1),
-            nn.Sigmoid()
+            nn.Linear(256 * 8 * 8, 1)
         )
 
-    def forward(self, img):
-        return self.model(img)
+    def forward(self, x):
+        return self.net(x)
 
 
-generator = Generator().to(device)
-discriminator = Discriminator().to(device)
+# -------------------------------------------------------------
+# INITIALIZE MODELS
+# -------------------------------------------------------------
+latent_dim = 100
+G = Generator(latent_dim).to(device)
+D = Discriminator().to(device)
 
-# ---------------------------------------------------------
-# LOSS + OPTIMIZERS
-# ---------------------------------------------------------
-criterion = nn.BCELoss()
-opt_G = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
-opt_D = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+criterion = nn.BCEWithLogitsLoss()
+opt_G = optim.Adam(G.parameters(), lr=0.0002, betas=(0.5, 0.999))
+opt_D = optim.Adam(D.parameters(), lr=0.0002, betas=(0.5, 0.999))
 
-# ---------------------------------------------------------
-# SAVE SAMPLES
-# ---------------------------------------------------------
-def save_samples(epoch):
-    generator.eval()
+# -------------------------------------------------------------
+# SAMPLE FOLDER
+# -------------------------------------------------------------
+sample_folder = "samples2"
+os.makedirs(sample_folder, exist_ok=True)
+
+# -------------------------------------------------------------
+# SAVE SAMPLE IMAGES
+# -------------------------------------------------------------
+def save_samples(epoch, fixed_noise):
+    G.eval()
     with torch.no_grad():
-        z = torch.randn(25, latent_dim).to(device)
-        fake_imgs = generator(z).cpu()
+        fake = G(fixed_noise).cpu()
+        fake = (fake + 1) / 2  
 
-    fig, axes = plt.subplots(5, 5, figsize=(5, 5))
-    idx = 0
-    for i in range(5):
-        for j in range(5):
-            axes[i, j].imshow(fake_imgs[idx].squeeze(), cmap="gray")
-            axes[i, j].axis("off")
-            idx += 1
+    fig = plt.figure(figsize=(5, 5))
+    for i in range(25):
+        plt.subplot(5, 5, i + 1)
+        plt.imshow(fake[i].permute(1, 2, 0))
+        plt.axis("off")
 
     plt.tight_layout()
     plt.savefig(f"{sample_folder}/epoch_{epoch}.png")
     plt.close()
-    generator.train()
+    G.train()
 
+# -------------------------------------------------------------
+# TRAIN LOOP
+# -------------------------------------------------------------
+epochs = 50
+fixed_noise = torch.randn(25, latent_dim, device=device)
 
-# ---------------------------------------------------------
-# TRAINING LOOP
-# ---------------------------------------------------------
-print("\nStarting Training...\n")
+print("Starting Training...")
 
 for epoch in range(1, epochs + 1):
-    pbar = tqdm(loader, desc=f"Epoch {epoch}/{epochs}", colour="magenta")
+    progress = tqdm(dataloader, desc=f"Epoch {epoch}/{epochs}", colour="magenta")
 
-    for real_imgs, _ in pbar:
-        real_imgs = real_imgs.to(device)
-        batch = real_imgs.size(0)
+    for real, _ in progress:
+        real = real.to(device)
+        batch_size = real.size(0)
 
-        real_labels = torch.ones(batch, 1).to(device)
-        fake_labels = torch.zeros(batch, 1).to(device)
+        #####################################
+        # Train Discriminator
+        #####################################
 
-        # -------------------------
-        # TRAIN DISCRIMINATOR
-        # -------------------------
-        z = torch.randn(batch, latent_dim).to(device)
-        fake_imgs = generator(z)
+        noise = torch.randn(batch_size, latent_dim, device=device)
+        fake = G(noise)
 
-        if use_amp:
-            with autocast(device_type="cuda"):
-                real_output = discriminator(real_imgs)
-                fake_output = discriminator(fake_imgs.detach())
-                d_loss = criterion(real_output, real_labels) + criterion(fake_output, fake_labels)
-        else:
-            real_output = discriminator(real_imgs)
-            fake_output = discriminator(fake_imgs.detach())
-            d_loss = criterion(real_output, real_labels) + criterion(fake_output, fake_labels)
+        real_labels = torch.ones(batch_size, 1, device=device)
+        fake_labels = torch.zeros(batch_size, 1, device=device)
 
         opt_D.zero_grad()
-        d_loss.backward()
+
+        real_pred = D(real)
+        fake_pred = D(fake.detach())
+
+        loss_real = criterion(real_pred, real_labels)
+        loss_fake = criterion(fake_pred, fake_labels)
+        loss_D = loss_real + loss_fake
+
+        loss_D.backward()
         opt_D.step()
 
-        # -------------------------
-        # TRAIN GENERATOR
-        # -------------------------
-        if use_amp:
-            with autocast(device_type="cuda"):
-                fake_output = discriminator(fake_imgs)
-                g_loss = criterion(fake_output, real_labels)
-        else:
-            fake_output = discriminator(fake_imgs)
-            g_loss = criterion(fake_output, real_labels)
+        #####################################
+        # Train Generator
+        #####################################
 
         opt_G.zero_grad()
-        g_loss.backward()
+        fake_pred = D(fake)
+
+        loss_G = criterion(fake_pred, real_labels)
+        loss_G.backward()
         opt_G.step()
 
-        pbar.set_postfix(G=float(g_loss), D=float(d_loss))
+        progress.set_postfix(G_loss=float(loss_G), D_loss=float(loss_D))
 
-    # Save sample every 10 epochs
+    # Save sample images every 10 epochs
     if epoch % 10 == 0:
-        save_samples(epoch)
+        save_samples(epoch, fixed_noise)
 
-print("Training complete!")
+    # Optional checkpoint
+    torch.save({
+        "epoch": epoch,
+        "generator_state": G.state_dict(),
+        "discriminator_state": D.state_dict(),
+        "opt_G_state": opt_G.state_dict(),
+        "opt_D_state": opt_D.state_dict()
+    }, f"checkpoint_epoch_{epoch}.pth")
+
+# -------------------------------------------------------------
+# FINAL MODEL SAVE
+# -------------------------------------------------------------
+torch.save(G.state_dict(), "generator_final.pth")
+torch.save(D.state_dict(), "discriminator_final.pth")
+
+print("Training complete. Models saved.")
