@@ -16,6 +16,7 @@ print("Mixed precision:", mixed_precision.global_policy())
 # LOAD CIFAR-10
 # -------------------------------------------
 (x_train, _), (_, _) = tf.keras.datasets.cifar10.load_data()
+x_train = tf.image.resize(x_train, (256, 256)).numpy()
 x_train = (x_train.astype("float32") - 127.5) / 127.5  # Normalize to [-1, 1]
 
 BUFFER_SIZE = 60000
@@ -34,10 +35,14 @@ dataset = (
 # -------------------------------------------
 def build_generator():
     inputs = layers.Input(shape=(100,))
-    x = layers.Dense(4 * 4 * 256, use_bias=False)(inputs)
+    x = layers.Dense(4 * 4 * 512, use_bias=False)(inputs)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
-    x = layers.Reshape((4, 4, 256))(x)
+    x = layers.Reshape((4, 4, 512))(x)
+
+    x = layers.Conv2DTranspose(256, 4, strides=2, padding="same", use_bias=False)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.ReLU()(x)
 
     x = layers.Conv2DTranspose(128, 4, strides=2, padding="same", use_bias=False)(x)
     x = layers.BatchNormalization()(x)
@@ -58,9 +63,13 @@ def build_generator():
 # DISCRIMINATOR (FAST)
 # -------------------------------------------
 def build_discriminator():
-    inputs = layers.Input(shape=(32, 32, 3))
+    inputs = layers.Input(shape=(256, 256, 3))
 
-    x = layers.Conv2D(64, 4, strides=2, padding="same")(inputs)
+    x = layers.Conv2D(32, 4, strides=2, padding="same")(inputs)
+    x = layers.LeakyReLU(0.2)(x)
+
+    x = layers.Conv2D(64, 4, strides=2, padding="same")(x)
+    x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(0.2)(x)
 
     x = layers.Conv2D(128, 4, strides=2, padding="same")(x)
@@ -68,6 +77,10 @@ def build_discriminator():
     x = layers.LeakyReLU(0.2)(x)
 
     x = layers.Conv2D(256, 4, strides=2, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.2)(x)
+
+    x = layers.Conv2D(512, 4, strides=2, padding="same")(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(0.2)(x)
 
@@ -146,8 +159,8 @@ def save_models(epoch):
 # -------------------------------------------
 # TRAIN LOOP WITH ALWAYS-VISIBLE PINK PROGRESS BAR 🌸
 # -------------------------------------------
-EPOCHS = 200
-milestones = [1, 5, 20, 40, 100, 200]
+EPOCHS = 10
+milestones = [1, 5, 10]
 
 for epoch in range(1, EPOCHS + 1):
     print(f"\n🌸 Epoch {epoch}/{EPOCHS}")
