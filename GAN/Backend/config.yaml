@@ -2,14 +2,14 @@
 # Modify these parameters to customize training behavior
 
 training:
-  epochs: 400
-  batch_size: 64
-  learning_rate: 0.0002
+  epochs: 300  # 300 epochs is good balance for quality vs speed
+  batch_size: 64  # Reduce to 64 for faster training (128 is slower)
+  learning_rate: 0.0001  # Lower learning rate for stability
   beta1: 0.5  # Adam optimizer beta1
   beta2: 0.999  # Adam optimizer beta2
   
 image:
-  resolution: 128  # Image resolution (64x64, 128x128, etc.)
+  resolution: 64  # Keep at 64x64 for speed (128x128 is 4x slower)
   channels: 3  # RGB channels
   
 generator:

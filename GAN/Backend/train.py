@@ -102,49 +102,37 @@ print(f"Image resolution: {config.image.resolution}x{config.image.resolution}")
 # =========================================================
 # DATASET LOADER
 # =========================================================
-def load_dataset(animal_filter=None, batch_size=64):
-    """Load CIFAR-10 dataset with optional animal filtering."""
+def load_dataset(animal_filter=None, batch_size=64, max_images=None):
+    """Load dataset from ./data/cat and ./data/dog directories."""
+    from data_loader import load_dataset as load_data
     
-    transform = transforms.Compose([
-        transforms.Resize(config.image.resolution),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-
-    full_dataset = datasets.CIFAR10(
-        "./data",
-        train=True,
-        download=True,
-        transform=transform
-    )
-
-    if animal_filter:
-        class_names = [
-            "airplane", "automobile", "bird", "cat", "deer",
-            "dog", "frog", "horse", "ship", "truck"
-        ]
-        allowed_indices = [
-            i for i, name in enumerate(class_names)
-            if name in animal_filter
-        ]
-        # Filter to only include specified animals
-        dataset = [(img, lbl) for img, lbl in full_dataset if lbl in allowed_indices]
-    else:
-        dataset = full_dataset
-
-    return DataLoader(
-        dataset,
+    if animal_filter is None:
+        animal_filter = ["cat", "dog"]
+    
+    # Normalize to singular form
+    animal_filter = [a.lower().rstrip('s') for a in animal_filter]
+    
+    return load_data(
         batch_size=batch_size,
-        shuffle=True,
-        num_workers=0,  # Windows compatibility
+        resolution=config.image.resolution,
+        animal_filter=animal_filter,
+        num_workers=0,
+        max_images=max_images,
     )
 
 
 # =========================================================
 # TRAINING LOOP
 # =========================================================
-def train(animal_types=None, epochs=None, batch_size=None):
-    """Train DCGAN model."""
+def train(animal_types=None, epochs=None, batch_size=None, max_images=None):
+    """Train DCGAN model.
+    
+    Args:
+        animal_types: List of animal types to train on
+        epochs: Number of epochs
+        batch_size: Batch size
+        max_images: Maximum images to load (for faster testing)
+    """
     
     if animal_types is None:
         animal_types = ["cat", "dog"]
@@ -156,11 +144,13 @@ def train(animal_types=None, epochs=None, batch_size=None):
     print(f"\n{'='*60}")
     print(f"Training DCGAN for: {animal_types}")
     print(f"Epochs: {epochs}, Batch size: {batch_size}")
+    if max_images:
+        print(f"Max images: {max_images}")
     print(f"{'='*60}\n")
 
     # Load dataset
     print("Loading dataset...")
-    dataloader = load_dataset(animal_filter=animal_types, batch_size=batch_size)
+    dataloader = load_dataset(animal_filter=animal_types, batch_size=batch_size, max_images=max_images)
     print(f"Dataset loaded: {len(dataloader)} batches")
 
     # Initialize models
@@ -312,7 +302,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--animals",
         type=str,
-        default="cat",
+        default="cat, dog",
         help="Comma-separated animal types to train on (default: cat,dog)"
     )
     parser.add_argument(
@@ -327,6 +317,12 @@ if __name__ == "__main__":
         default=None,
         help="Batch size (default: from config)"
     )
+    parser.add_argument(
+        "--max-images",
+        type=int,
+        default=None,
+        help="Max images to load for faster testing (e.g., 2000)"
+    )
     
     args = parser.parse_args()
     
@@ -337,4 +333,5 @@ if __name__ == "__main__":
         animal_types=animal_types,
         epochs=args.epochs,
         batch_size=args.batch_size,
+        max_images=args.max_images,
     )
