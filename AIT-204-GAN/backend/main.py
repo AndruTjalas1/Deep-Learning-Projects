@@ -31,12 +31,15 @@ app.add_middleware(
 # Determine compute device
 if torch.backends.mps.is_available():
     device = torch.device("mps")
+    default_device = "mps"
     logger.info("Using Apple Silicon GPU (MPS)")
 elif torch.cuda.is_available():
     device = torch.device("cuda")
+    default_device = "cuda"
     logger.info("Using NVIDIA GPU (CUDA)")
 else:
     device = torch.device("cpu")
+    default_device = "cpu"
     logger.info("Using CPU")
 
 trainer = DCGANTrainer(device=device)
@@ -53,8 +56,8 @@ class TrainingConfig(BaseModel):
     epochs: int = 10
     batch_size: int = 64
     learning_rate: float = 0.0002
-    device: str = "mps"
-    class_filter: Optional[str] = None  # NEW — CIFAR-10 class filtering
+    device: str = default_device  # Auto-detect GPU or CPU
+    class_filter: Optional[str] = None  # CIFAR-10 class filtering
 
 
 class GenerateRequest(BaseModel):
