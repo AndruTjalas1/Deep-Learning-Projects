@@ -1,0 +1,170 @@
+.training-control {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.training-control h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
+
+.control-section {
+  margin-bottom: 20px;
+}
+
+.control-section h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.1em;
+}
+
+.control-section label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.animal-selector {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider {
+  width: 100%;
+  margin: 10px 0;
+  cursor: pointer;
+}
+
+.slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.training-progress {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.training-progress h4 {
+  margin: 0 0 12px 0;
+}
+
+.progress-bar {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  height: 24px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  height: 100%;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.progress-text {
+  font-size: 0.95em;
+  margin-bottom: 8px;
+}
+
+.loss-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+  font-family: monospace;
+}
+
+.loss-display div {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: white;
+  color: #f5576c;
+  transform: translateY(-2px);
+}
+
+.btn-danger {
+  background: rgba(139, 0, 0, 0.3);
+  color: white;
+  border: 2px solid rgba(255, 100, 100, 0.5);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 0, 0, 0.3);
+  border-color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #ffcccc;
+  font-size: 0.9em;
+}

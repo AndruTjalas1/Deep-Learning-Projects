@@ -1,0 +1,75 @@
+.metrics-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.metrics-display h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
+
+.placeholder {
+  text-align: center;
+  opacity: 0.8;
+  font-style: italic;
+  padding: 40px 20px;
+}
+
+.metrics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.metric-label {
+  font-size: 0.9em;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.metric-value.metric-g {
+  color: #82ca9d;
+}
+
+.metric-value.metric-d {
+  color: #ffc658;
+}
+
+.chart-container {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #ffcccc;
+  font-size: 0.9em;
+}

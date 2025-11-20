@@ -1,0 +1,47 @@
+# DCGAN Configuration
+# Modify these parameters to customize training behavior
+
+training:
+  epochs: 50
+  batch_size: 64
+  learning_rate: 0.0002
+  beta1: 0.5  # Adam optimizer beta1
+  beta2: 0.999  # Adam optimizer beta2
+  
+image:
+  resolution: 64  # Image resolution (64x64, 128x128, etc.)
+  channels: 3  # RGB channels
+  
+generator:
+  latent_dim: 100  # Size of latent vector
+  feature_maps: 64  # Base number of feature maps
+  
+discriminator:
+  feature_maps: 64  # Base number of feature maps
+  
+sampling:
+  sample_interval: 100  # Generate samples every N batches
+  num_samples: 16  # Number of samples to generate
+  
+data:
+  dataset_path: "./data"  # Path to dataset folder
+  # Expected structure:
+  # ./data/
+  #   ├── cats/
+  #   │   ├── image1.jpg
+  #   │   └── ...
+  #   └── dogs/
+  #       ├── image1.jpg
+  #       └── ...
+  
+  train_split: 0.8  # 80% train, 20% validation
+  num_workers: 4  # Number of data loading workers
+  
+output:
+  samples_dir: "./samples"  # Directory to save generated samples
+  models_dir: "./saved_models"  # Directory to save model checkpoints
+  logs_dir: "./logs"  # Directory to save training logs
+  
+device:
+  use_gpu: true  # Use GPU if available
+  # Device will automatically detect CUDA on NVIDIA, MPS on Mac, or CPU

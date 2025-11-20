@@ -1,0 +1,96 @@
+.config-panel {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.config-panel h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
+
+.config-panel form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  font-size: 0.95em;
+  transition: all 0.3s ease;
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+  background: rgba(200, 200, 200, 0.5);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.form-group small {
+  margin-top: 4px;
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.submit-btn {
+  grid-column: 1 / -1;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: white;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #ffcccc;
+  font-size: 0.9em;
+}
