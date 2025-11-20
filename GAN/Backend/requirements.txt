@@ -12,3 +12,4 @@ numpy==1.26.2
 pillow==10.1.0
 pyyaml==6.0.1
 opencv-python==4.8.1.78
+tqdm==4.66.1

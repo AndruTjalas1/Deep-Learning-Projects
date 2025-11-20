@@ -29,88 +29,23 @@ export const trainingApi = {
   },
 
   /**
-   * Get current configuration
+   * Generate images for a specific animal type
    */
-  getConfig: async () => {
-    const response = await api.get('/config');
-    return response.data;
-  },
-
-  /**
-   * Update configuration
-   */
-  updateConfig: async (params) => {
-    const response = await api.post('/config/update', null, { params });
-    return response.data;
-  },
-
-  /**
-   * Start training
-   */
-  startTraining: async (animalTypes = ['cats', 'dogs'], epochs = null) => {
-    const response = await api.post('/train/start', null, {
-      params: {
-        animal_types: animalTypes.join(','),
-        ...(epochs && { epochs }),
-      },
+  generateImages: async ({ animal_type = 'cat', num_images = 16 } = {}) => {
+    console.log('Calling generate with:', { animal_type, num_images });
+    const response = await api.post('/generate', {
+      animal_type,
+      num_images: parseInt(num_images, 10),
     });
+    console.log('Generate response:', response.data);
     return response.data;
   },
 
   /**
-   * Get training status
+   * Get available models
    */
-  getTrainingStatus: async () => {
-    const response = await api.get('/train/status');
-    return response.data;
-  },
-
-  /**
-   * Stop training
-   */
-  stopTraining: async () => {
-    const response = await api.post('/train/stop');
-    return response.data;
-  },
-
-  /**
-   * Generate images
-   */
-  generateImages: async (numImages = 16) => {
-    const response = await api.get('/generate', {
-      params: { num_images: numImages },
-    });
-    return response.data;
-  },
-
-  /**
-   * List all samples
-   */
-  listSamples: async () => {
-    const response = await api.get('/samples');
-    return response.data;
-  },
-
-  /**
-   * Get sample image URL
-   */
-  getSampleUrl: (sampleName) => {
-    return `${API_BASE_URL}/samples/${sampleName}`;
-  },
-
-  /**
-   * List all models
-   */
-  listModels: async () => {
-    const response = await api.get('/models');
-    return response.data;
-  },
-
-  /**
-   * Get training metrics
-   */
-  getTrainingMetrics: async () => {
-    const response = await api.get('/training-metrics');
+  getAvailableModels: async () => {
+    const response = await api.get('/available-models');
     return response.data;
   },
 };

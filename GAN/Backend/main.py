@@ -1,27 +1,28 @@
-"""Main FastAPI application for DCGAN training server."""
+"""Simplified FastAPI application for DCGAN inference only."""
 
-import asyncio
-import json
 from pathlib import Path
-from typing import Optional, List
-import threading
-
-from fastapi import FastAPI, HTTPException, File, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from typing import Optional
+import torch
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
 
 from config import get_config
 from device import get_device, get_device_info
-from models import Generator, Discriminator, weights_init
-from data_loader import create_train_loader
-from trainer import DCGANTrainer
+from models import Generator
 
+# Pydantic models for request validation
+class GenerateRequest(BaseModel):
+    animal_type: str = "cat"
+    num_images: int = 16
+    seed: Optional[int] = None
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="DCGAN Training Server",
-    description="API for training DCGAN models on cats, dogs, and other animals",
+    title="DCGAN Generation Server",
+    description="API for generating cat and dog images from pre-trained DCGAN models",
     version="1.0.0",
 )
 
@@ -34,18 +35,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global trainer instance
-trainer: Optional[DCGANTrainer] = None
-training_thread: Optional[threading.Thread] = None
+# Global state
 config = None
+generator = None
+device = None
+
+# Model paths
+MODELS_DIR = Path("./saved_models")
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup."""
-    global config
+    global config, device
+    
     config = get_config()
+    device = get_device(config.device.use_gpu)
+    
     print("Server started successfully")
+    print(f"Device: {device}")
     print(f"Device info: {get_device_info()}")
 
 
@@ -53,17 +61,14 @@ async def startup_event():
 async def root():
     """Root endpoint."""
     return {
-        "message": "DCGAN Training Server",
+        "message": "DCGAN Generation Server",
         "version": "1.0.0",
         "endpoints": [
-            "/health",
-            "/device-info",
-            "/config",
-            "/train/start",
-            "/train/status",
-            "/train/stop",
-            "/generate",
-            "/samples",
+            "GET /health",
+            "GET /device-info",
+            "GET /available-models",
+            "POST /generate",
+            "POST /generate-and-save",
         ],
     }
 
@@ -71,7 +76,10 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "trainer_initialized": trainer is not None}
+    return {
+        "status": "healthy",
+        "generator_loaded": generator is not None,
+    }
 
 
 @app.get("/device-info")
@@ -80,259 +88,223 @@ async def device_info():
     return get_device_info()
 
 
-@app.get("/config")
-async def get_current_config():
-    """Get current configuration."""
-    if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
+@app.get("/available-models")
+async def available_models():
+    """List available pre-trained models."""
+    if not MODELS_DIR.exists():
+        return {"models": []}
     
-    return {
-        "training": config.training.model_dump(),
-        "image": config.image.model_dump(),
-        "generator": config.generator.model_dump(),
-        "discriminator": config.discriminator.model_dump(),
-        "sampling": config.sampling.model_dump(),
-        "data": config.data.model_dump(),
-        "output": config.output.model_dump(),
-    }
+    models = []
+    for model_file in MODELS_DIR.glob("generator_*.pt"):
+        try:
+            size_mb = model_file.stat().st_size / (1024 * 1024)
+            models.append({
+                "filename": model_file.name,
+                "size_mb": round(size_mb, 2),
+            })
+        except:
+            pass
+    
+    return {"models": sorted(models, key=lambda x: x["filename"])}
 
 
-@app.post("/config/update")
-async def update_config(
-    epochs: Optional[int] = None,
-    batch_size: Optional[int] = None,
-    learning_rate: Optional[float] = None,
-    resolution: Optional[int] = None,
-    sample_interval: Optional[int] = None,
-):
-    """Update configuration parameters."""
-    global config
+@app.post("/generate")
+async def generate(request: GenerateRequest):
+    """
+    Generate images using pre-trained generator for specific animal type.
     
-    if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
-    
-    if epochs is not None:
-        config.training.epochs = epochs
-    if batch_size is not None:
-        config.training.batch_size = batch_size
-    if learning_rate is not None:
-        config.training.learning_rate = learning_rate
-    if resolution is not None:
-        config.image.resolution = resolution
-    if sample_interval is not None:
-        config.sampling.sample_interval = sample_interval
-    
-    return {
-        "message": "Configuration updated",
-        "config": {
-            "training": config.training.model_dump(),
-            "image": config.image.model_dump(),
-            "sampling": config.sampling.model_dump(),
-        },
-    }
-
-
-@app.post("/train/start")
-async def start_training(
-    animal_types: Optional[List[str]] = None,
-    epochs: Optional[int] = None,
-):
-    """Start training the DCGAN model."""
-    global trainer, training_thread, config
+    Args:
+        request: GenerateRequest with animal_type, num_images, and optional seed
+        
+    Returns:
+        List of generated images as base64 strings
+    """
+    global generator, device, config
     
     if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
+        raise HTTPException(status_code=500, detail="Server not initialized")
     
-    if trainer is not None and trainer.training_started and not trainer.training_completed:
-        raise HTTPException(status_code=400, detail="Training already in progress")
+    animal_type = request.animal_type
+    num_images = request.num_images
+    seed = request.seed
     
-    # Use provided epochs or config epochs
-    num_epochs = epochs or config.training.epochs
+    print(f"[GENERATE] Received request: animal_type={animal_type}, num_images={num_images}, seed={seed}")
     
-    # Use provided animal types or default
-    animal_types = animal_types or ['cats', 'dogs']
+    if num_images < 1 or num_images > 64:
+        raise HTTPException(status_code=400, detail="num_images must be between 1 and 64")
+    
+    # Normalize animal type
+    animal_type = animal_type.lower().strip()
+    if animal_type not in ["cat", "dog"]:
+        raise HTTPException(status_code=400, detail="animal_type must be 'cat' or 'dog'")
     
     try:
-        # Initialize models
-        device = get_device(config.device.use_gpu)
+        # Set seed if provided
+        if seed is not None:
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed(seed)
         
-        generator = Generator(
+        # Determine model path - look for animal_type specific model first, then final
+        model_names = [
+            MODELS_DIR / f"generator_{animal_type}_final.pt",  # animal-specific final
+            MODELS_DIR / f"generator_{animal_type}.pt",         # animal-specific
+            MODELS_DIR / "generator_final.pt",                  # general final
+        ]
+        
+        model_path = None
+        for candidate_path in model_names:
+            if candidate_path.exists():
+                model_path = candidate_path
+                break
+        
+        if model_path is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No model found for '{animal_type}'. Train a model first using: python train.py --animals {animal_type}"
+            )
+        
+        # Load model if not already loaded or different path
+        if generator is None or model_path.name != getattr(generator, "_loaded_from", ""):
+            print(f"Loading generator from: {model_path}")
+            
+            from train import SimpleGenerator  # Import from train.py
+            
+            generator_new = SimpleGenerator(
+                nz=config.generator.latent_dim,
+                ngf=config.generator.feature_maps,
+                nc=config.image.channels,
+            ).to(device)
+            
+            generator_new.load_state_dict(torch.load(model_path, map_location=device))
+            generator_new.eval()
+            generator_new._loaded_from = model_path.name
+            generator = generator_new
+        
+        # Generate images
+        print(f"[GENERATE] Generating {num_images} images...")
+        with torch.no_grad():
+            z = torch.randn(
+                num_images,
+                config.generator.latent_dim,
+                device=device
+            )
+            generated_images = generator(z)
+            print(f"[GENERATE] Generated tensor shape: {generated_images.shape}")
+            
+            # Denormalize from [-1, 1] to [0, 1]
+            generated_images = (generated_images + 1) / 2
+            generated_images = torch.clamp(generated_images, 0, 1)
+        
+        # Convert to base64 for JSON response
+        import io
+        import base64
+        from PIL import Image
+        
+        images_base64 = []
+        for img in generated_images:
+            # Convert to PIL Image
+            img_np = (img.cpu().numpy() * 255).astype("uint8")
+            img_pil = Image.fromarray(img_np.transpose(1, 2, 0))
+            
+            # Convert to base64
+            buffer = io.BytesIO()
+            img_pil.save(buffer, format="PNG")
+            img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            images_base64.append(img_base64)
+        
+        print(f"[GENERATE] Returning {len(images_base64)} images")
+        
+        return {
+            "success": True,
+            "animal_type": animal_type,
+            "num_images": len(images_base64),
+            "image_size": config.image.resolution,
+            "model": model_path.name,
+            "images": images_base64,
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating images: {str(e)}")
+        import traceback as tb
+        tb.print_exc()
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+
+@app.post("/generate-and-save")
+async def generate_and_save(
+    num_images: int = 4,
+    model_path: Optional[str] = None,
+    output_name: str = "generated",
+):
+    """
+    Generate images and save them to disk.
+    
+    Args:
+        num_images: Number of images to generate
+        model_path: Path to generator model
+        output_name: Name for output file (without extension)
+        
+    Returns:
+        File download response
+    """
+    global generator, device, config
+    
+    if config is None:
+        raise HTTPException(status_code=500, detail="Server not initialized")
+    
+    try:
+        from torchvision.utils import save_image
+        
+        # Load model
+        if model_path is None:
+            model_path = MODELS_DIR / "generator_final.pt"
+        else:
+            model_path = MODELS_DIR / model_path
+        
+        if not model_path.exists():
+            raise HTTPException(status_code=400, detail=f"Model not found: {model_path}")
+        
+        generator_new = Generator(
             latent_dim=config.generator.latent_dim,
             feature_maps=config.generator.feature_maps,
             image_channels=config.image.channels,
             image_resolution=config.image.resolution,
-        )
+        ).to(device)
         
-        discriminator = Discriminator(
-            feature_maps=config.discriminator.feature_maps,
-            image_channels=config.image.channels,
-            image_resolution=config.image.resolution,
-        )
+        generator_new.load_state_dict(torch.load(model_path, map_location=device))
+        generator_new.eval()
         
-        # Initialize weights
-        generator.apply(weights_init)
-        discriminator.apply(weights_init)
-        
-        # Create trainer
-        trainer = DCGANTrainer(
-            generator=generator,
-            discriminator=discriminator,
-            config=config.model_dump(),
-            device=device,
-        )
-        
-        # Create data loader
-        train_loader = create_train_loader(
-            data_dir=config.data.dataset_path,
-            batch_size=config.training.batch_size,
-            num_workers=config.data.num_workers,
-            resolution=config.image.resolution,
-            animal_types=animal_types,
-        )
-        
-        # Start training in background thread
-        def train_worker():
-            trainer.train(
-                train_loader=train_loader,
-                num_epochs=num_epochs,
-                checkpoint_interval=5,
+        # Generate images
+        with torch.no_grad():
+            z = torch.randn(
+                num_images,
+                config.generator.latent_dim,
+                device=device
             )
+            generated_images = generator_new(z)
+            generated_images = (generated_images + 1) / 2
         
-        training_thread = threading.Thread(target=train_worker, daemon=True)
-        training_thread.start()
+        # Save images
+        output_dir = Path("./generated")
+        output_dir.mkdir(exist_ok=True)
+        output_file = output_dir / f"{output_name}.png"
         
-        return {
-            "message": "Training started",
-            "epochs": num_epochs,
-            "animal_types": animal_types,
-            "device": str(device),
-            "image_resolution": config.image.resolution,
-        }
+        save_image(generated_images, output_file, nrow=int(num_images**0.5) or 1)
+        
+        return FileResponse(
+            output_file,
+            media_type="image/png",
+            filename=f"{output_name}.png"
+        )
     
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=400, detail=f"Data not found: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error starting training: {str(e)}")
-
-
-@app.get("/train/status")
-async def training_status():
-    """Get training status."""
-    if trainer is None:
-        return {
-            "training_active": False,
-            "message": "No training session initialized",
-        }
-    
-    state = trainer.get_training_state()
-    return {
-        "training_active": trainer.training_started and not trainer.training_completed,
-        **state,
-    }
-
-
-@app.post("/train/stop")
-async def stop_training():
-    """Stop training gracefully."""
-    if trainer is None or not trainer.training_started:
-        raise HTTPException(status_code=400, detail="No active training")
-    
-    # The trainer will save a checkpoint on interrupt
-    return {
-        "message": "Training stop requested",
-        "current_epoch": trainer.current_epoch,
-    }
-
-
-@app.get("/generate")
-async def generate_images(num_images: int = 16):
-    """Generate random images using the current generator."""
-    if trainer is None or trainer.generator is None:
-        raise HTTPException(status_code=400, detail="No trained generator available")
-    
-    try:
-        images = trainer.generate_images(num_images)
-        return {
-            "message": "Images generated successfully",
-            "num_images": num_images,
-            "image_shape": list(images.shape),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating images: {str(e)}")
-
-
-@app.get("/samples")
-async def list_samples():
-    """List all generated samples."""
-    if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
-    
-    samples_dir = Path(config.output.samples_dir)
-    
-    if not samples_dir.exists():
-        return {"samples": []}
-    
-    samples = sorted([
-        str(f.relative_to(samples_dir)) for f in samples_dir.glob("*.png")
-    ])
-    
-    return {
-        "total_samples": len(samples),
-        "samples": samples,
-    }
-
-
-@app.get("/samples/{sample_name}")
-async def get_sample(sample_name: str):
-    """Get a specific sample image."""
-    if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
-    
-    sample_path = Path(config.output.samples_dir) / sample_name
-    
-    if not sample_path.exists():
-        raise HTTPException(status_code=404, detail=f"Sample not found: {sample_name}")
-    
-    return FileResponse(sample_path, media_type="image/png")
-
-
-@app.get("/models")
-async def list_models():
-    """List all saved model checkpoints."""
-    if config is None:
-        raise HTTPException(status_code=500, detail="Configuration not loaded")
-    
-    models_dir = Path(config.output.models_dir)
-    
-    if not models_dir.exists():
-        return {"models": []}
-    
-    models = sorted([
-        str(f.relative_to(models_dir)) for f in models_dir.glob("*.pt")
-    ])
-    
-    return {
-        "total_models": len(models),
-        "models": models,
-    }
-
-
-@app.get("/training-metrics")
-async def get_training_metrics():
-    """Get training metrics (losses, etc.)."""
-    if trainer is None:
-        raise HTTPException(status_code=400, detail="No training session active")
-    
-    state = trainer.get_training_state()
-    
-    return {
-        "current_epoch": state['current_epoch'],
-        "total_epochs": state['total_epochs'],
-        "g_losses": state['g_losses'],
-        "d_losses": state['d_losses'],
-        "latest_g_loss": state['latest_g_loss'],
-        "latest_d_loss": state['latest_d_loss'],
-    }
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 if __name__ == "__main__":
@@ -340,5 +312,5 @@ if __name__ == "__main__":
         app,
         host="0.0.0.0",
         port=8000,
-        reload=False,
+        log_level="info",
     )

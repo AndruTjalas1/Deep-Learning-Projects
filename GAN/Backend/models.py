@@ -108,44 +108,33 @@ class Discriminator(nn.Module):
             image_resolution: Input image resolution (64, 128, 256, etc.)
         """
         super().__init__()
-        self.feature_maps = feature_maps
-        self.image_channels = image_channels
-        self.image_resolution = image_resolution
         
-        # Calculate number of layers
-        self.num_layers = int(torch.log2(torch.tensor(image_resolution))) - 2
-        
-        # Build convolutional layers
-        layers = []
-        in_channels = image_channels
-        out_channels = feature_maps
-        
-        for i in range(self.num_layers + 1):
-            layers.append(
-                nn.Conv2d(
-                    in_channels,
-                    out_channels,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                    bias=False,
-                )
-            )
+        # Simple discriminator architecture that works for 64x64 images
+        # Based on proven DCGAN architecture from the literature
+        self.main = nn.Sequential(
+            # Input: (batch, 3, 64, 64)
+            nn.Conv2d(image_channels, feature_maps, 4, stride=2, padding=1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # (batch, 64, 32, 32)
             
-            if i > 0:  # No batch norm on first layer
-                layers.append(nn.BatchNorm2d(out_channels))
+            nn.Conv2d(feature_maps, feature_maps * 2, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(feature_maps * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # (batch, 128, 16, 16)
             
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            nn.Conv2d(feature_maps * 2, feature_maps * 4, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(feature_maps * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # (batch, 256, 8, 8)
             
-            in_channels = out_channels
-            out_channels *= 2
-        
-        self.main = nn.Sequential(*layers)
-        
-        # Final classification layer
-        self.classifier = nn.Sequential(
-            nn.Conv2d(in_channels, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Conv2d(feature_maps * 4, feature_maps * 8, 4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(feature_maps * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # (batch, 512, 4, 4)
+            
+            nn.Conv2d(feature_maps * 8, 1, 4, stride=1, padding=0, bias=False),
             nn.Sigmoid(),
+            # (batch, 1, 1, 1)
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -156,11 +145,10 @@ class Discriminator(nn.Module):
             x: Input image of shape (batch_size, channels, height, width)
             
         Returns:
-            Binary classification (real/fake) of shape (batch_size, 1)
+            Binary classification (real/fake) of shape (batch_size,)
         """
-        features = self.main(x)
-        output = self.classifier(features)
-        return output.view(-1, 1).squeeze(1)
+        output = self.main(x)
+        return output.view(-1)
 
 
 def weights_init(m: nn.Module) -> None:
