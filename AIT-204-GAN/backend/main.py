@@ -28,8 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global trainer instance
-# Support Apple Silicon (MPS), CUDA, and CPU
+# Determine compute device
 if torch.backends.mps.is_available():
     device = torch.device("mps")
     logger.info("Using Apple Silicon GPU (MPS)")
@@ -45,12 +44,17 @@ training_task = None
 active_connections = []
 
 
+# --------------------------
+#   Request Models
+# --------------------------
+
 class TrainingConfig(BaseModel):
-    dataset: str = "mnist"  # mnist or fashion_mnist
+    dataset: str = "mnist"  # mnist, fashion_mnist, cifar10
     epochs: int = 10
     batch_size: int = 64
     learning_rate: float = 0.0002
-    device: str = "mps"  # mps, cuda, or cpu
+    device: str = "mps"
+    class_filter: Optional[str] = None  # NEW — CIFAR-10 class filtering
 
 
 class GenerateRequest(BaseModel):
@@ -59,25 +63,11 @@ class GenerateRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    """API root"""
-    return {
-        "message": "DCGAN Demo API",
-        "endpoints": {
-            "/start_training": "POST - Start GAN training",
-            "/stop_training": "POST - Stop GAN training",
-            "/status": "GET - Get training status",
-            "/generate": "POST - Generate synthetic images",
-            "/metrics": "GET - Get training metrics",
-            "/save_model": "POST - Save model checkpoint",
-            "/load_model": "POST - Load model checkpoint",
-            "/ws": "WebSocket - Real-time training updates"
-        }
-    }
+    return {"message": "DCGAN Demo API is running"}
 
 
 @app.get("/status")
 async def get_status():
-    """Get current training status"""
     return {
         "is_training": trainer.is_training,
         "current_epoch": trainer.current_epoch,
@@ -87,31 +77,19 @@ async def get_status():
 
 @app.get("/metrics")
 async def get_metrics():
-    """Get training metrics"""
     return trainer.get_metrics()
 
 
 @app.post("/generate")
 async def generate_images(request: GenerateRequest):
-    """
-    Generate synthetic images
-
-    Args:
-        request: GenerateRequest with num_images
-
-    Returns:
-        Base64 encoded image grid
-    """
     try:
-        num_images = min(request.num_images, 64)  # Limit to 64 images
+        num_images = min(request.num_images, 64)
+
         fake_images = trainer.generate_images(num_images=num_images)
         image_b64 = trainer.images_to_base64(fake_images, nrow=int(num_images**0.5))
 
-        return {
-            "success": True,
-            "image": image_b64,
-            "num_images": num_images
-        }
+        return {"success": True, "image": image_b64, "num_images": num_images}
+
     except Exception as e:
         logger.error(f"Error generating images: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -119,45 +97,31 @@ async def generate_images(request: GenerateRequest):
 
 @app.post("/start_training")
 async def start_training(config: TrainingConfig):
-    """
-    Start GAN training
-
-    Args:
-        config: TrainingConfig with training parameters
-
-    Returns:
-        Training start confirmation
-    """
     global training_task, trainer, device
 
     if trainer.is_training:
-        return {"success": False, "message": "Training already in progress"}
+        return {"success": False, "message": "Training is already running"}
 
     try:
         # Switch device if needed
         requested_device = torch.device(config.device)
         if str(requested_device) != str(trainer.device):
-            logger.info(f"Switching device from {trainer.device} to {requested_device}")
+            logger.info(f"Switching device: {trainer.device} -> {requested_device}")
             device = requested_device
             trainer = DCGANTrainer(device=device)
-            logger.info(f"Trainer recreated with device: {device}")
 
-        # Create dataloader
+        # Build dataloader with class filter for CIFAR-10
         dataloader = trainer.get_dataloader(
             dataset_name=config.dataset,
-            batch_size=config.batch_size
+            batch_size=config.batch_size,
+            class_filter=config.class_filter
         )
 
         # Start training in background
-        training_task = asyncio.create_task(
-            run_training(trainer, dataloader, config.epochs)
-        )
+        training_task = asyncio.create_task(run_training(trainer, dataloader, config.epochs))
 
-        return {
-            "success": True,
-            "message": f"Training started on {config.device}",
-            "config": config.dict()
-        }
+        return {"success": True, "message": "Training started", "config": config.dict()}
+
     except Exception as e:
         logger.error(f"Error starting training: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -165,11 +129,10 @@ async def start_training(config: TrainingConfig):
 
 @app.post("/stop_training")
 async def stop_training():
-    """Stop ongoing training"""
     global training_task
 
     if not trainer.is_training:
-        return {"success": False, "message": "No training in progress"}
+        return {"success": False, "message": "No active training"}
 
     trainer.is_training = False
 
@@ -185,255 +148,109 @@ async def stop_training():
 
 @app.post("/save_model")
 async def save_model():
-    """
-    Save the current model checkpoint
-
-    Returns:
-        Save confirmation with file path
-    """
     if trainer.is_training:
-        return {"success": False, "message": "Cannot save model during training"}
+        return {"success": False, "message": "Cannot save while training"}
 
     try:
-        checkpoint_path = "dcgan_checkpoint.pth"
-        trainer.save_checkpoint(checkpoint_path)
-        logger.info(f"Model saved to {checkpoint_path}")
-
-        return {
-            "success": True,
-            "message": "Model saved successfully",
-            "path": checkpoint_path
-        }
+        trainer.save_checkpoint("dcgan_checkpoint.pth")
+        return {"success": True, "message": "Model saved", "path": "dcgan_checkpoint.pth"}
     except Exception as e:
-        logger.error(f"Error saving model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/load_model")
 async def load_model():
-    """
-    Load a model checkpoint
-
-    Returns:
-        Load confirmation with file path
-    """
     if trainer.is_training:
-        return {"success": False, "message": "Cannot load model during training"}
+        return {"success": False, "message": "Cannot load while training"}
 
     try:
-        checkpoint_path = "dcgan_checkpoint.pth"
-        trainer.load_checkpoint(checkpoint_path)
-        logger.info(f"Model loaded from {checkpoint_path}")
-
-        return {
-            "success": True,
-            "message": "Model loaded successfully",
-            "path": checkpoint_path
-        }
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="No saved model found")
+        trainer.load_checkpoint("dcgan_checkpoint.pth")
+        return {"success": True, "message": "Model loaded", "path": "dcgan_checkpoint.pth"}
     except Exception as e:
-        logger.error(f"Error loading model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def run_training(trainer: DCGANTrainer, dataloader, num_epochs):
-    """
-    Run training loop asynchronously
+# --------------------------
+#   Training Loop
+# --------------------------
 
-    Args:
-        trainer: DCGANTrainer instance
-        dataloader: PyTorch DataLoader
-        num_epochs: Number of epochs to train
-    """
+async def run_training(trainer: DCGANTrainer, dataloader, num_epochs):
     trainer.is_training = True
-    logger.info(f"Starting training for {num_epochs} epochs on {trainer.device}")
 
     try:
         for epoch in range(num_epochs):
             if not trainer.is_training:
-                logger.info("Training stopped by user")
                 break
 
             trainer.current_epoch = epoch
-            epoch_metrics = {
-                'g_loss': 0,
-                'd_loss': 0,
-                'real_score': 0,
-                'fake_score': 0
-            }
 
-            batch_count = 0
-            for i, data in enumerate(dataloader):
-                try:
-                    real_images = data[0].to(trainer.device)
+            for batch_idx, (real, _) in enumerate(dataloader):
 
-                    # Train step
-                    step_metrics = trainer.train_step(real_images)
+                real = real.to(trainer.device)
+                metrics = trainer.train_step(real)
 
-                    # Accumulate metrics
-                    epoch_metrics['g_loss'] += step_metrics['loss_g']
-                    epoch_metrics['d_loss'] += step_metrics['loss_d']
-                    epoch_metrics['real_score'] += step_metrics['real_score']
-                    epoch_metrics['fake_score'] += step_metrics['fake_score']
-                    batch_count += 1
+                if batch_idx % 20 == 0:
+                    await broadcast_update({
+                        "type": "batch_update",
+                        "epoch": epoch,
+                        "batch": batch_idx,
+                        "metrics": metrics
+                    })
 
-                    # Send updates every 5 batches (even more frequent for GPU)
-                    if i % 5 == 0:
-                        await broadcast_update({
-                            'type': 'batch_update',
-                            'epoch': epoch,
-                            'batch': i,
-                            'total_batches': len(dataloader),
-                            'metrics': step_metrics
-                        })
-                        if i % 50 == 0:  # Only log every 50 to avoid spam
-                            logger.info(f"Epoch {epoch}, Batch {i}/{len(dataloader)}")
+                await asyncio.sleep(0)  # Yield to event loop
 
-                    # CRITICAL: Yield to event loop after EVERY batch to keep WebSocket alive
-                    # This is especially important with fast GPU training
-                    await asyncio.sleep(0)
-
-                except Exception as e:
-                    logger.error(f"Error in batch {i}: {e}")
-                    continue
-
-            # Average metrics over epoch
-            if batch_count > 0:
-                epoch_metrics = {k: v / batch_count for k, v in epoch_metrics.items()}
-            else:
-                logger.error("No batches processed in epoch")
-                continue
-
-            # Store metrics
-            trainer.metrics['g_losses'].append(epoch_metrics['g_loss'])
-            trainer.metrics['d_losses'].append(epoch_metrics['d_loss'])
-            trainer.metrics['real_scores'].append(epoch_metrics['real_score'])
-            trainer.metrics['fake_scores'].append(epoch_metrics['fake_score'])
-
-            # Generate sample images
+            # Epoch complete — generate preview image
             try:
-                fake_images = trainer.generate_images(num_images=16, noise=trainer.fixed_noise[:16])
-                image_b64 = trainer.images_to_base64(fake_images, nrow=4)
-            except Exception as e:
-                logger.error(f"Error generating sample images: {e}")
-                image_b64 = None
+                sample = trainer.generate_images(16, noise=trainer.fixed_noise[:16])
+                sample_b64 = trainer.images_to_base64(sample, nrow=4)
+            except Exception:
+                sample_b64 = None
 
-            # Send epoch update
             await broadcast_update({
-                'type': 'epoch_complete',
-                'epoch': epoch,
-                'metrics': epoch_metrics,
-                'sample_image': image_b64,
-                'all_metrics': trainer.get_metrics()
+                "type": "epoch_complete",
+                "epoch": epoch,
+                "metrics": trainer.get_metrics(),
+                "sample_image": sample_b64
             })
 
-            logger.info(
-                f"Epoch [{epoch+1}/{num_epochs}] "
-                f"Loss_D: {epoch_metrics['d_loss']:.4f} "
-                f"Loss_G: {epoch_metrics['g_loss']:.4f} "
-                f"D(x): {epoch_metrics['real_score']:.4f} "
-                f"D(G(z)): {epoch_metrics['fake_score']:.4f}"
-            )
-
-            # Small delay to prevent overwhelming the system
-            await asyncio.sleep(0.1)
-
     except asyncio.CancelledError:
-        logger.info("Training cancelled")
+        pass
+
     except Exception as e:
-        logger.error(f"Training error: {e}", exc_info=True)
-        await broadcast_update({
-            'type': 'error',
-            'message': f"Training error: {str(e)}"
-        })
+        await broadcast_update({"type": "error", "message": str(e)})
+
     finally:
         trainer.is_training = False
-        await broadcast_update({
-            'type': 'training_complete',
-            'message': 'Training completed or stopped'
-        })
+        await broadcast_update({"type": "training_complete"})
 
 
 async def broadcast_update(message):
-    """Broadcast message to all connected WebSocket clients"""
-    if not active_connections:
-        return  # No clients connected, skip
-
     disconnected = []
-    for connection in active_connections:
+    for ws in active_connections:
         try:
-            await connection.send_json(message)
-        except Exception as e:
-            logger.warning(f"Failed to send to client: {e}")
-            disconnected.append(connection)
-
-    # Remove disconnected clients
-    for conn in disconnected:
-        try:
-            active_connections.remove(conn)
-        except ValueError:
-            pass  # Already removed
+            await ws.send_json(message)
+        except Exception:
+            disconnected.append(ws)
+    for ws in disconnected:
+        active_connections.remove(ws)
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for real-time training updates
-
-    Clients connect here to receive:
-    - Batch updates during training
-    - Epoch completion updates with sample images
-    - Training metrics
-    """
-    await websocket.accept()
-    active_connections.append(websocket)
-    logger.info(f"WebSocket client connected. Total clients: {len(active_connections)}")
-
-    async def send_heartbeat():
-        """Send periodic heartbeat to keep connection alive"""
-        while True:
-            try:
-                await asyncio.sleep(5)  # Send heartbeat every 5 seconds
-                if websocket in active_connections:
-                    await websocket.send_json({'type': 'heartbeat', 'timestamp': asyncio.get_event_loop().time()})
-            except Exception:
-                break
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    active_connections.append(ws)
 
     try:
-        # Send initial status
-        await websocket.send_json({
-            'type': 'connected',
-            'message': 'Connected to DCGAN training server',
-            'status': {
-                'is_training': trainer.is_training,
-                'current_epoch': trainer.current_epoch
-            }
-        })
-
-        # Start heartbeat task
-        heartbeat_task = asyncio.create_task(send_heartbeat())
-
-        # Keep connection alive - listen for client messages
         while True:
-            try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=10.0)
-                # Echo back any received messages (for ping/pong)
-                await websocket.send_json({'type': 'pong', 'data': data})
-            except asyncio.TimeoutError:
-                # No message received in 10 seconds - this is fine
-                continue
-
-    except WebSocketDisconnect:
-        logger.info("WebSocket client disconnected normally")
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+            await asyncio.sleep(5)
+            await ws.send_json({"type": "heartbeat"})
+    except Exception:
+        pass
     finally:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
-        logger.info(f"WebSocket client removed. Total clients: {len(active_connections)}")
+        if ws in active_connections:
+            active_connections.remove(ws)
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
