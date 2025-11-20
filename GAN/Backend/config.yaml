@@ -2,14 +2,14 @@
 # Modify these parameters to customize training behavior
 
 training:
-  epochs: 50
+  epochs: 400
   batch_size: 64
   learning_rate: 0.0002
   beta1: 0.5  # Adam optimizer beta1
   beta2: 0.999  # Adam optimizer beta2
   
 image:
-  resolution: 64  # Image resolution (64x64, 128x128, etc.)
+  resolution: 128  # Image resolution (64x64, 128x128, etc.)
   channels: 3  # RGB channels
   
 generator:
@@ -20,7 +20,7 @@ discriminator:
   feature_maps: 64  # Base number of feature maps
   
 sampling:
-  sample_interval: 100  # Generate samples every N batches
+  sample_interval: 10  # Generate samples every N epochs
   num_samples: 16  # Number of samples to generate
   
 data:

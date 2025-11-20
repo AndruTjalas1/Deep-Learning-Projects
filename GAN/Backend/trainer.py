@@ -102,6 +102,10 @@ class DCGANTrainer:
             real_images = real_images.to(self.device)
             batch_size = real_images.size(0)
             
+            # Debug: print shapes on first batch
+            if batch_idx == 0:
+                print(f"DEBUG: real_images shape: {real_images.shape}")
+            
             # Labels for real and fake images
             real_labels = torch.ones(batch_size, device=self.device)
             fake_labels = torch.zeros(batch_size, device=self.device)
@@ -113,6 +117,12 @@ class DCGANTrainer:
             
             # Real images
             d_real_output = self.discriminator(real_images)
+            
+            # Debug: print discriminator output shape
+            if batch_idx == 0:
+                print(f"DEBUG: d_real_output shape: {d_real_output.shape}")
+                print(f"DEBUG: real_labels shape: {real_labels.shape}")
+            
             d_real_loss = self.criterion(d_real_output, real_labels)
             
             # Fake images

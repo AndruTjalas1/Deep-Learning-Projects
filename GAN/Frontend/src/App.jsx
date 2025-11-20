@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import ConfigPanel from './components/ConfigPanel';
-import TrainingControl from './components/TrainingControl';
-import MetricsDisplay from './components/MetricsDisplay';
-import GalleryView from './components/GalleryView';
 import trainingApi from './api';
 import './App.css';
 
 function App() {
-  const [isTraining, setIsTraining] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState('cat');
+  const [numImages, setNumImages] = useState(16);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState([]);
   const [deviceInfo, setDeviceInfo] = useState(null);
-  const [refreshGallery, setRefreshGallery] = useState(0);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch device info on mount
     const fetchDeviceInfo = async () => {
       try {
         const info = await trainingApi.getDeviceInfo();
@@ -23,31 +21,27 @@ function App() {
     };
 
     fetchDeviceInfo();
-
-    // Check training status periodically
-    const statusInterval = setInterval(async () => {
-      try {
-        const status = await trainingApi.getTrainingStatus();
-        setIsTraining(status.training_active || false);
-      } catch (err) {
-        console.error('Error checking training status:', err);
-      }
-    }, 3000);
-
-    return () => clearInterval(statusInterval);
   }, []);
 
-  const handleTrainingStart = () => {
-    setIsTraining(true);
-  };
-
-  const handleTrainingStop = () => {
-    setIsTraining(false);
-  };
-
-  const handleConfigUpdate = () => {
-    // Refresh gallery when config changes
-    setRefreshGallery(prev => prev + 1);
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setError(null);
+    console.log('Generating with numImages:', numImages, 'type:', typeof numImages);
+    try {
+      const data = await trainingApi.generateImages({
+        animal_type: selectedAnimal,
+        num_images: numImages,
+      });
+      
+      if (data.images) {
+        setGeneratedImages(data.images);
+      }
+    } catch (err) {
+      setError(`Error generating images: ${err.message}`);
+      console.error('Generation error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const getDeviceString = () => {
@@ -64,39 +58,85 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🐱🐶 DCGAN Generator</h1>
-        <p>Deep Convolutional Generative Adversarial Network for Cats & Dogs</p>
+        <h1>🐱🐶 DCGAN Image Generator</h1>
+        <p>Generate AI-created cat and dog images</p>
         <div className="device-status">
           <span>Device: {getDeviceString()}</span>
-          <span className={`status-badge ${isTraining ? 'training' : 'idle'}`}>
-            {isTraining ? '🔴 Training' : '🟢 Idle'}
-          </span>
         </div>
       </header>
 
       <main className="app-main">
         <div className="container">
-          <div className="grid-layout">
-            <div className="column">
-              <ConfigPanel isTraining={isTraining} onConfigUpdate={handleConfigUpdate} />
-              <TrainingControl
-                isTraining={isTraining}
-                onTrainingStart={handleTrainingStart}
-                onTrainingStop={handleTrainingStop}
-              />
+          <div className="control-panel">
+            <h2>Generate Images</h2>
+            
+            <div className="control-group">
+              <label>Select Animal Type:</label>
+              <div className="button-group">
+                <button
+                  className={`animal-button ${selectedAnimal === 'cat' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnimal('cat')}
+                  disabled={isGenerating}
+                >
+                  🐱 Cats
+                </button>
+                <button
+                  className={`animal-button ${selectedAnimal === 'dog' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnimal('dog')}
+                  disabled={isGenerating}
+                >
+                  🐶 Dogs
+                </button>
+              </div>
             </div>
 
-            <div className="column">
-              <MetricsDisplay trainingActive={isTraining} />
-              <GalleryView refreshTrigger={refreshGallery} />
+            <div className="control-group">
+              <label htmlFor="numImages">Number of Images:</label>
+              <div className="input-group">
+                <input
+                  id="numImages"
+                  type="range"
+                  min="1"
+                  max="64"
+                  value={numImages}
+                  onChange={(e) => setNumImages(parseInt(e.target.value))}
+                  disabled={isGenerating}
+                />
+                <span className="number-display">{numImages}</span>
+              </div>
             </div>
+
+            <button
+              className="generate-button"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+            >
+              {isGenerating ? 'Generating...' : 'Generate Images'}
+            </button>
+
+            {error && <div className="error-message">{error}</div>}
           </div>
+
+          {generatedImages.length > 0 && (
+            <div className="gallery">
+              <h2>Generated Images ({generatedImages.length})</h2>
+              <div className="image-grid">
+                {generatedImages.map((imgData, idx) => (
+                  <div key={idx} className="image-item">
+                    <img
+                      src={`data:image/png;base64,${imgData}`}
+                      alt={`Generated ${selectedAnimal} ${idx + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
       <footer className="app-footer">
-        <p>DCGAN Training Server • Real-time Model Monitoring • GPU Accelerated</p>
-        <p>For Mac & Windows • Built with PyTorch & React</p>
+        <p>AI Image Generation with DCGAN • Powered by PyTorch</p>
       </footer>
     </div>
   );
