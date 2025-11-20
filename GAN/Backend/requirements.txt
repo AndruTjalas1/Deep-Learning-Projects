@@ -4,9 +4,9 @@ python-multipart==0.0.6
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# PyTorch versions compatible with Railway (Python 3.12)
-torch==2.5.1
-torchvision==0.20.1
+# PyTorch + Torchvision supporting Python 3.13
+torch==2.6.0
+torchvision==0.21.0
 
 numpy==1.26.2
 pillow==10.1.0
