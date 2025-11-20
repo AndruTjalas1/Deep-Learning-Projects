@@ -1,10 +1,13 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-python-multipart==0.0.6
-pydantic==2.5.0
-pydantic-settings==2.1.0
+fastapi==0.110.0
+uvicorn==0.29.0
+python-multipart==0.0.9
 
-# PyTorch + Torchvision supporting Python 3.13
+# Modern Pydantic + core that support Python 3.13
+pydantic==2.6.4
+pydantic-core==2.18.2
+pydantic-settings==2.2.1
+
+# PyTorch + TorchVision for Python 3.13
 torch==2.6.0
 torchvision==0.21.0
 
