@@ -7,6 +7,14 @@
     {
       "source": "/api/gan/(.*)",
       "destination": "https://gan-production.up.railway.app/gan/$1"
+    },
+    {
+      "source": "/gan",
+      "destination": "/gan/index.html"
+    },
+    {
+      "source": "/gan/(.*)",
+      "destination": "/gan/$1"
     }
   ]
 }
