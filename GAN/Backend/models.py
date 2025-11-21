@@ -13,6 +13,7 @@ class Generator(nn.Module):
         feature_maps: int = 64,
         image_channels: int = 3,
         image_resolution: int = 64,
+        dropout_rate: float = 0.2,
     ):
         """
         Initialize Generator.
@@ -22,12 +23,14 @@ class Generator(nn.Module):
             feature_maps: Base number of feature maps
             image_channels: Number of output image channels (3 for RGB)
             image_resolution: Target image resolution (64, 128, 256, etc.)
+            dropout_rate: Dropout probability (default: 0.2)
         """
         super().__init__()
         self.latent_dim = latent_dim
         self.feature_maps = feature_maps
         self.image_channels = image_channels
         self.image_resolution = image_resolution
+        self.dropout_rate = dropout_rate
         
         # Calculate number of layers based on resolution
         # 64: 4 layers, 128: 5 layers, 256: 6 layers
@@ -57,6 +60,7 @@ class Generator(nn.Module):
             )
             layers.append(nn.BatchNorm2d(out_channels))
             layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.Dropout(self.dropout_rate))
             in_channels = out_channels
         
         # Final layer to get RGB image
@@ -98,6 +102,7 @@ class Discriminator(nn.Module):
         feature_maps: int = 64,
         image_channels: int = 3,
         image_resolution: int = 64,
+        dropout_rate: float = 0.2,
     ):
         """
         Initialize Discriminator.
@@ -106,8 +111,10 @@ class Discriminator(nn.Module):
             feature_maps: Base number of feature maps
             image_channels: Number of input image channels (3 for RGB)
             image_resolution: Input image resolution (64, 128, 256, etc.)
+            dropout_rate: Dropout probability (default: 0.2)
         """
         super().__init__()
+        self.dropout_rate = dropout_rate
         
         # Simple discriminator architecture that works for 64x64 images
         # Based on proven DCGAN architecture from the literature
@@ -115,21 +122,25 @@ class Discriminator(nn.Module):
             # Input: (batch, 3, 64, 64)
             nn.Conv2d(image_channels, feature_maps, 4, stride=2, padding=1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(self.dropout_rate),
             # (batch, 64, 32, 32)
             
             nn.Conv2d(feature_maps, feature_maps * 2, 4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(feature_maps * 2),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(self.dropout_rate),
             # (batch, 128, 16, 16)
             
             nn.Conv2d(feature_maps * 2, feature_maps * 4, 4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(feature_maps * 4),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(self.dropout_rate),
             # (batch, 256, 8, 8)
             
             nn.Conv2d(feature_maps * 4, feature_maps * 8, 4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(feature_maps * 8),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(self.dropout_rate),
             # (batch, 512, 4, 4)
             
             nn.Conv2d(feature_maps * 8, 1, 4, stride=1, padding=0, bias=False),
