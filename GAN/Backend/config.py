@@ -12,8 +12,11 @@ class TrainingConfig(BaseModel):
     epochs: int = 50
     batch_size: int = 64
     learning_rate: float = 0.0002
+    generator_learning_rate: float = 0.0001
+    discriminator_learning_rate: float = 0.0002
     beta1: float = 0.5
     beta2: float = 0.999
+    label_smoothing: float = 0.1  # Use 0.9 for real labels instead of 1.0
 
 
 class ImageConfig(BaseModel):

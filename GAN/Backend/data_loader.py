@@ -14,7 +14,7 @@ class MicrosoftCatsDogsDataset(Dataset):
     """Custom dataset for Microsoft Cats and Dogs."""
     
     def __init__(self, root_dir: str, animal_filter: Optional[List[str]] = None, 
-                 resolution: int = 64, transform=None, max_images: int = None):
+                 resolution: int = 64, transform=None, max_images: int = None, use_cropped: bool = True):
         """Initialize dataset.
         
         Args:
@@ -23,11 +23,13 @@ class MicrosoftCatsDogsDataset(Dataset):
             resolution: Image resolution
             transform: Image transforms
             max_images: Maximum number of images to load (useful for faster training during testing)
+            use_cropped: Use cropped images if available (default: True)
         """
         self.root_dir = Path(root_dir)
         self.resolution = resolution
         self.image_paths = []
         self.labels = []
+        self.use_cropped = use_cropped
         
         # Default transforms
         if transform is None:
@@ -47,18 +49,35 @@ class MicrosoftCatsDogsDataset(Dataset):
         # Load images
         valid_extensions = {'.jpg', '.jpeg', '.png', '.bmp'}
         for animal_idx, animal in enumerate(animal_filter):
-            animal_dir = self.root_dir / animal
-            if animal_dir.exists():
-                for img_file in animal_dir.glob('**/*'):
-                    if img_file.suffix.lower() in valid_extensions:
-                        self.image_paths.append(str(img_file))
-                        self.labels.append(animal_idx)
-                        
-                        # Stop if we've reached max_images
-                        if max_images and len(self.image_paths) >= max_images:
-                            break
-            if max_images and len(self.image_paths) >= max_images:
-                break
+            # Try cropped first if use_cropped is True
+            if self.use_cropped:
+                animal_dir = self.root_dir / f"{animal}_cropped"
+                if animal_dir.exists():
+                    for img_file in animal_dir.glob('**/*'):
+                        if img_file.suffix.lower() in valid_extensions:
+                            self.image_paths.append(str(img_file))
+                            self.labels.append(animal_idx)
+                            
+                            # Stop if we've reached max_images
+                            if max_images and len(self.image_paths) >= max_images:
+                                break
+                    if max_images and len(self.image_paths) >= max_images:
+                        break
+            
+            # Fall back to original if cropped doesn't exist or use_cropped is False
+            if not self.use_cropped or not (self.root_dir / f"{animal}_cropped").exists():
+                animal_dir = self.root_dir / animal
+                if animal_dir.exists():
+                    for img_file in animal_dir.glob('**/*'):
+                        if img_file.suffix.lower() in valid_extensions:
+                            self.image_paths.append(str(img_file))
+                            self.labels.append(animal_idx)
+                            
+                            # Stop if we've reached max_images
+                            if max_images and len(self.image_paths) >= max_images:
+                                break
+                if max_images and len(self.image_paths) >= max_images:
+                    break
         
         if not self.image_paths:
             raise ValueError(f"No images found in {self.root_dir}")
@@ -88,6 +107,7 @@ def _load_from_directory(
     animal_filter: Optional[List[str]] = None,
     num_workers: int = 0,
     max_images: int = None,
+    use_cropped: bool = True,
 ) -> DataLoader:
     """Load from custom directory structure."""
     import sys
@@ -102,6 +122,7 @@ def _load_from_directory(
         animal_filter=animal_filter,
         resolution=resolution,
         max_images=max_images,
+        use_cropped=use_cropped,
     )
     
     loader = DataLoader(
@@ -121,10 +142,11 @@ def load_dataset(
     animal_filter: Optional[List[str]] = None,
     num_workers: int = 0,
     max_images: int = None,
+    use_cropped: bool = True,
 ) -> DataLoader:
     """
     Main entry point for loading dataset.
-    Loads from ./data/cat and ./data/dog directories.
+    Loads from ./data/cat and ./data/dog directories (or cropped versions if available).
     
     Args:
         batch_size: Batch size for data loader
@@ -132,6 +154,7 @@ def load_dataset(
         animal_filter: List of animal types (['cat'], ['dog'], or ['cat', 'dog'])
         num_workers: Number of workers (default 0 for Windows)
         max_images: Max images to load (useful for faster testing, e.g., 2000)
+        use_cropped: Use cropped images if available (default: True)
         
     Returns:
         DataLoader for training
@@ -198,4 +221,5 @@ def load_dataset(
         animal_filter=animal_filter,
         num_workers=num_workers,
         max_images=max_images,
+        use_cropped=use_cropped,
     )
