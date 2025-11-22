@@ -14,6 +14,9 @@ __pycache__/
 # Model files (too large)
 
 !RNN/backend/saved_models/model.pt
+!GAN/Backend/saved_models/generator_cat_final.pt
+!GAN/Backend/saved_models/generator_dog_final.pt
+!GAN/Backend/saved_models/generator_final.pt
 *.pth
 *.h5
 

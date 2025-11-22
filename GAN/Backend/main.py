@@ -18,6 +18,7 @@ class GenerateRequest(BaseModel):
     animal_type: str = "cat"
     num_images: int = 16
     seed: Optional[int] = None
+    epoch: Optional[int] = None  # Optional: specify epoch to test (e.g., 400, 500, 600)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -127,8 +128,9 @@ async def generate(request: GenerateRequest):
     animal_type = request.animal_type
     num_images = request.num_images
     seed = request.seed
+    epoch = request.epoch
     
-    print(f"[GENERATE] Received request: animal_type={animal_type}, num_images={num_images}, seed={seed}")
+    print(f"[GENERATE] Received request: animal_type={animal_type}, num_images={num_images}, seed={seed}, epoch={epoch}")
     
     if num_images < 1 or num_images > 64:
         raise HTTPException(status_code=400, detail="num_images must be between 1 and 64")
@@ -146,11 +148,22 @@ async def generate(request: GenerateRequest):
                 torch.cuda.manual_seed(seed)
         
         # Determine model path - look for animal_type specific model first, then final
-        model_names = [
-            MODELS_DIR / f"generator_{animal_type}_final.pt",  # animal-specific final
-            MODELS_DIR / f"generator_{animal_type}.pt",         # animal-specific
-            MODELS_DIR / "generator_final.pt",                  # general final
-        ]
+        # If epoch is specified, prioritize that checkpoint
+        model_names = []
+        
+        if epoch is not None:
+            # Prioritize the specified epoch
+            model_names.extend([
+                MODELS_DIR / f"generator_{animal_type}_epoch_{epoch}.pt",
+                MODELS_DIR / f"generator_epoch_{epoch}.pt",
+            ])
+        
+        # Then try animal-type specific models
+        model_names.extend([
+            MODELS_DIR / f"generator_{animal_type}_final.pt",
+            MODELS_DIR / f"generator_{animal_type}.pt",
+            MODELS_DIR / "generator_final.pt",
+        ])
         
         model_path = None
         for candidate_path in model_names:
