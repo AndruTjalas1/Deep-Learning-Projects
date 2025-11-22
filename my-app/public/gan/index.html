@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DCGAN Generator - Cats & Dogs</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DCGAN Generator - Cats & Dogs</title>
 
-    <!-- Important: Tell Vercel all URLs in this page start from /gan/ -->
-    <base href="/gan/">
+  <base href="/gan/">
 
-    <!-- Correct asset paths for nested folder -->
-    <script type="module" crossorigin src="/gan/assets/index-ChtUdvM5.js"></script>
-    <link rel="stylesheet" crossorigin href="/gan/assets/index-BtKgAt-B.css" />
+  <script>
+    // OVERRIDE localhost inside the GAN bundle
+    window.API_BASE =
+      (location.hostname.endsWith("vercel.app"))
+        ? "https://gan-production.up.railway.app"
+        : "http://localhost:8001";
+  </script>
 
-    <script>
-      // Auto-detect Railway backend
-      window.API_BASE =
-        location.hostname.endsWith("vercel.app")
-          ? "https://gan-production.up.railway.app"
-          : "http://localhost:8001";
-    </script>
-  </head>
-
-  <body>
-    <div id="root"></div>
-  </body>
+  <!-- Load the actual GAN bundle -->
+  <script defer src="/gan/static/js/index-ChtUdvM5.js"></script>
+  <link rel="stylesheet" href="/gan/static/css/index-BtKgAt-B.css" />
+</head>
+<body>
+  <div id="root"></div>
+</body>
 </html>
