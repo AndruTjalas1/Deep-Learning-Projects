@@ -13,25 +13,33 @@ const PROJECTS = [
   { id: 2, title: "Artificial Neural Network (ANN)", subtitle: "Project 2", emoji: "🧩", slug: "project-2" },
   { id: 3, title: "Neural Network", subtitle: "Project 3", emoji: "🕸️", slug: "project-3" },
   { id: 4, title: "NLP Application", subtitle: "Project 4", emoji: "🗣️", slug: "project-4" },
-  { id: 5, title: "Recurrent Neural Network", subtitle: "Project 5", emoji: "🎨", slug: "project-5" }, // RNN stays as-is
+  { id: 5, title: "Recurrent Neural Network", subtitle: "Project 5", emoji: "🎨", slug: "project-5" },
   { id: 6, title: "Deep Neural Network Performance", subtitle: "Project 6", emoji: "⚙️", slug: "project-6" },
   { id: 7, title: "GAN-Based Application", subtitle: "Project 7", emoji: "🧪", slug: "project-7" },
   { id: 8, title: "Deep Neural Network Project", subtitle: "Project 8", emoji: "☁️", slug: "project-8" },
 ];
 
 export default function App() {
+
   const handleLaunch = (slug, id) => {
     if (id >= 1 && id <= 4) {
-      // Projects 1–4 go to Streamlit app
       window.location.href = STREAMLIT_URL;
       return;
     }
+
     if (id === 5) {
-      // Project 5 (RNN) goes to the bundled page
+      // RNN app
       window.location.href = "/rnn/";
       return;
     }
-    // Projects 6–8 keep internal route (placeholder)
+
+    if (id === 7) {
+      // ✅ GAN app
+      window.location.href = "/gan/";
+      return;
+    }
+
+    // Projects 6 & 8 remain placeholders
     window.location.href = `/project/${slug}`;
   };
 
@@ -44,7 +52,11 @@ export default function App() {
       alert(`${title}\nThis RNN app is live. Explore it on the /rnn/ page.`);
       return;
     }
-    // 6–8
+    if (id === 7) {
+      alert(`${title}\nGAN image generator launches from /gan/ and connects to Railway.`);
+      return;
+    }
+
     alert(`${title}\nDetails coming soon.`);
   };
 
@@ -74,17 +86,9 @@ export default function App() {
       </section>
 
       <footer className="footer">
-        {/* Opens your Railway health endpoint explicitly */}
-        <a
-          className="link"
-          href={`${API_BASE}/api/health`}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="link" href={`${API_BASE}/api/health`} target="_blank" rel="noreferrer">
           API Health
         </a>
-        {/* (Optional) show which API base is active */}
-        {/* <span className="muted" style={{ marginLeft: 12 }}>API: {API_BASE}</span> */}
       </footer>
     </div>
   );
