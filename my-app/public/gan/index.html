@@ -1,25 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DCGAN Generator - Cats & Dogs</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🐱🐶 DCGAN Generator - Cats & Dogs</title>
 
-  <base href="/gan/">
+    <base href="/gan/">
 
-  <script>
-    // OVERRIDE localhost inside the GAN bundle
-    window.API_BASE =
-      (location.hostname.endsWith("vercel.app"))
-        ? "https://gan-production.up.railway.app"
-        : "http://localhost:8001";
-  </script>
+    <!-- 1️⃣ API Base -->
+    <script>
+      window.API_BASE =
+        (location.hostname.endsWith("vercel.app"))
+          ? "https://gan-production.up.railway.app"
+          : "http://localhost:8001";
+    </script>
 
-  <!-- Load the actual GAN bundle -->
-  <script defer src="/gan/static/js/index-ChtUdvM5.js"></script>
-  <link rel="stylesheet" href="/gan/static/css/index-BtKgAt-B.css" />
-</head>
-<body>
-  <div id="root"></div>
-</body>
+    <!-- 2️⃣ SAME MAGIC AS RNN REWRITE ENGINE (patched for GAN) -->
+    <script>
+      (function () {
+        const API_BASE = (window.API_BASE || "").replace(/\/+$/, "");
+        const LOCAL = /^(https?:\/\/)(localhost|127\.0\.0\.1):8001/i;
+
+        const originalFetch = window.fetch;
+        window.fetch = function(resource, init) {
+          try {
+            let url = resource instanceof Request ? resource.url : String(resource);
+
+            // Rewrite requests
+            if (url.startsWith("/")) {
+              url = API_BASE + url;
+            } else if (LOCAL.test(url)) {
+              url = API_BASE + url.replace(LOCAL, "");
+            }
+
+            if (resource instanceof Request) {
+              resource = new Request(url, resource);
+            } else {
+              resource = url;
+            }
+          } catch (_) {}
+
+          return originalFetch(resource, init);
+        };
+
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+          try {
+            let u = String(url);
+
+            if (u.startsWith("/")) {
+              u = API_BASE + u;
+            } else if (LOCAL.test(u)) {
+              u = API_BASE + u.replace(LOCAL, "");
+            }
+
+            return originalOpen.call(this, method, u, ...rest);
+          } catch (_) {
+            return originalOpen.call(this, method, url, ...rest);
+          }
+        };
+      })();
+    </script>
+
+    <!-- 3️⃣ Load your existing static build (unchanged UI) -->
+    <script defer src="/gan/static/js/index-ChtUdvM5.js"></script>
+    <link href="/gan/static/css/index-BtKgAt-B.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
