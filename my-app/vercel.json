@@ -1,12 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/gan/(.*)",
-      "destination": "https://gan-production.up.railway.app/$1"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "https://cst435react-production.up.railway.app/api/$1"
+    },
+    {
+      "source": "/api/gan/(.*)",
+      "destination": "https://gan-production.up.railway.app/$1"
     },
     {
       "source": "/gan",
@@ -15,14 +15,6 @@
     {
       "source": "/gan/(.*)",
       "destination": "/gan/$1"
-    },
-    {
-      "source": "/rnn",
-      "destination": "/rnn/index.html"
-    },
-    {
-      "source": "/rnn/(.*)",
-      "destination": "/rnn/$1"
     }
   ]
 }
