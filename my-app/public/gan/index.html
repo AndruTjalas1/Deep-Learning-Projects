@@ -2,12 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DCGAN Generator - Cats & Dogs</title>
-    <script type="module" crossorigin src="/assets/index-ChtUdvM5.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BtKgAt-B.css">
+
+    <base href="/gan/">
+
+    <script>
+      window.API_BASE =
+        (location.hostname.endsWith("vercel.app"))
+          ? "https://gan-production.up.railway.app"
+          : "http://localhost:8001";
+    </script>
+
+    <!-- Load correct generated static assets -->
+    <script defer src="/gan/static/js/index-ChtUdvM5.js"></script>
+    <link href="/gan/static/css/index-BtKgAt-B.css" rel="stylesheet" />
   </head>
+
   <body>
     <div id="root"></div>
   </body>
