@@ -5,16 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DCGAN Generator - Cats & Dogs</title>
 
+    <!-- Ensure all paths resolve relative to /gan/ -->
     <base href="/gan/">
 
+    <!-- Determine API base dynamically -->
     <script>
-      window.API_BASE =
+      window.GAN_API_BASE = 
         (location.hostname.endsWith("vercel.app"))
           ? "https://gan-production.up.railway.app"
           : "http://localhost:8001";
     </script>
 
-    <!-- Load correct generated static assets -->
+    <!-- 🔥 OVERRIDE FETCH BEFORE THE BUNDLE LOADS -->
+    <script>
+      (function () {
+        const BASE = window.GAN_API_BASE.replace(/\/+$/, "");
+        const origFetch = window.fetch;
+
+        window.fetch = function (resource, init) {
+          try {
+            let url = resource instanceof Request ? resource.url : String(resource);
+
+            // If frontend calls /generate → rewrite to Railway
+            if (url.endsWith("/generate") || url.includes("/generate")) {
+              url = BASE + "/generate";
+            }
+
+            if (resource instanceof Request) {
+              resource = new Request(url, resource);
+            } else {
+              resource = url;
+            }
+          } catch (_) {}
+
+          return origFetch(resource, init);
+        };
+      })();
+    </script>
+
+    <!-- Load compiled frontend assets -->
     <script defer src="/gan/static/js/index-ChtUdvM5.js"></script>
     <link href="/gan/static/css/index-BtKgAt-B.css" rel="stylesheet" />
   </head>
