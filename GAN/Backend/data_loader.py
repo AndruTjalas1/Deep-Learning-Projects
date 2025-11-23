@@ -183,12 +183,26 @@ def load_dataset(
     # Check if we have local data
     has_local_data = False
     for animal in animal_filter:
+        # Check cropped first if use_cropped is True
+        if use_cropped:
+            animal_dir = data_dir / f"{animal}_cropped"
+            if animal_dir.exists():
+                images = list(animal_dir.glob('**/*.jpg')) + list(animal_dir.glob('**/*.jpeg')) + list(animal_dir.glob('**/*.png'))
+                if images:
+                    has_local_data = True
+                    print(f"Found {len(images)} cropped images in {animal_dir}")
+                    continue
+        
+        # Fall back to original if cropped not found
         animal_dir = data_dir / animal
         if animal_dir.exists():
             images = list(animal_dir.glob('**/*.jpg')) + list(animal_dir.glob('**/*.jpeg')) + list(animal_dir.glob('**/*.png'))
             if images:
                 has_local_data = True
-                print(f"Found {len(images)} images in {animal_dir}")
+                if use_cropped:
+                    print(f"Found {len(images)} original images in {animal_dir} (cropped version not found)")
+                else:
+                    print(f"Found {len(images)} original images in {animal_dir}")
     
     if not has_local_data:
         print("\n" + "!"*60)
