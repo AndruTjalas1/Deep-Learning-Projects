@@ -1,0 +1,97 @@
+.canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.canvas-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.canvas-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.canvas-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background-color: var(--bg-light);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.brush-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brush-control label {
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.brush-control input[type='range'] {
+  width: 100px;
+  cursor: pointer;
+}
+
+.brush-control span {
+  color: var(--text-light);
+  font-size: 14px;
+  min-width: 40px;
+}
+
+.canvas-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawing-canvas {
+  width: 100%;
+  height: 400px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+  cursor: crosshair;
+  box-shadow: var(--shadow);
+  touch-action: none;
+}
+
+.drawing-canvas.loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .drawing-canvas {
+    height: 300px;
+  }
+
+  .canvas-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .brush-control {
+    width: 100%;
+  }
+
+  .canvas-actions {
+    width: 100%;
+  }
+
+  .canvas-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
