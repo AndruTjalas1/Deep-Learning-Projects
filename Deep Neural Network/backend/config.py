@@ -42,12 +42,22 @@ DEBUG = FLASK_ENV == "development"
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://yourvercel.app").split(",")
 
 # Data Configuration
-NUM_CLASSES = 36  # 26 letters (A-Z) + 10 digits (0-9)
+NUM_CLASSES = 47  # EMNIST balanced split
 IMG_SIZE = 28  # Standard MNIST-like size
 
-# Character mapping
-CHARACTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-CHAR_TO_IDX = {char: idx for idx, char in enumerate(CHARACTERS[:NUM_CLASSES])}
+# EMNIST balanced split - OFFICIAL mapping from emnist-balanced-mapping.txt
+# Order: 0-9 (digits), A-Z (all uppercase), then lowercase non-merged (a,b,d,e,f,g,h,n,q,r,t)
+EMNIST_CLASSES = [
+    # 0-9: digits
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    # 10-35: ALL uppercase A-Z
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    # 36-46: lowercase non-merged (skipping c, i, j, k, l, m, o, p, s, u, v, w, x, y, z which are merged with uppercase)
+    'a', 'b', 'd', 'e', 'f', 'g', 'h', 'n', 'q', 'r', 't'
+]
+
+CHAR_TO_IDX = {char: idx for idx, char in enumerate(EMNIST_CLASSES)}
 IDX_TO_CHAR = {idx: char for char, idx in CHAR_TO_IDX.items()}
 
 print(f"Configuration loaded. Base directory: {BASE_DIR}")
