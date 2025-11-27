@@ -46,7 +46,7 @@ MODEL_ARCHITECTURE = {
 
 TRAINING = {
     # Epochs
-    "num_epochs": 100,  # More epochs for better convergence and style generalization
+    "num_epochs": 50,  # Quick training run for testing
     
     # Batch sizes (optimized for GPU with parallel data loading)
     "batch_size": 128,  # Reduced for more stable gradient updates across styles

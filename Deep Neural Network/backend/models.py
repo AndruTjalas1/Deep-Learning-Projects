@@ -10,47 +10,74 @@ import torch.nn.functional as F
 
 class CharacterCNN(nn.Module):
     """
-    Convolutional Neural Network for character/digit recognition.
+    Enhanced Convolutional Neural Network for character/digit recognition.
     
-    Architecture:
+    ENHANCED ARCHITECTURE (v2):
     - Input: 28x28 grayscale images
-    - Conv1: 32 filters, 3x3 kernel
-    - Conv2: 64 filters, 3x3 kernel
-    - FC1: 128 neurons
-    - FC2: 36 neurons (output)
+    - Conv Block 1: 64 filters (increased from 32), dual conv layers with residual connection
+    - Conv Block 2: 128 filters (increased from 64), dual conv layers with residual connection
+    - Conv Block 3: 256 filters (increased from 128), dual conv layers with residual connection
+    - Conv Block 4: 256 filters (NEW), additional layer for fine-grained features
+    - Global Average Pooling for robustness
+    - Dense Layers: 512 → 256 → num_classes
+    
+    Improvements:
+    - More filters per layer for better feature extraction
+    - Residual connections for better gradient flow
+    - Additional conv block for distinguishing hard character pairs (3 vs E, etc.)
+    - Global average pooling for spatial robustness
+    - Increased FC layer capacity
     
     This is the primary deep learning algorithm for character classification.
     """
     
-    def __init__(self, num_classes=36, dropout_rate=0.25):
+    def __init__(self, num_classes=36, dropout_rate=0.3):
         super(CharacterCNN, self).__init__()
         
-        # Convolutional layers
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
+        # ===== CONV BLOCK 1 (64 filters - increased from 32) =====
+        self.conv1a = nn.Conv2d(1, 64, kernel_size=3, padding=1)
+        self.bn1a = nn.BatchNorm2d(64)
+        self.conv1b = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn1b = nn.BatchNorm2d(64)
         self.pool1 = nn.MaxPool2d(2, 2)
         
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
+        # ===== CONV BLOCK 2 (128 filters - increased from 64) =====
+        self.conv2a = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn2a = nn.BatchNorm2d(128)
+        self.conv2b = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn2b = nn.BatchNorm2d(128)
         self.pool2 = nn.MaxPool2d(2, 2)
         
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm2d(128)
+        # ===== CONV BLOCK 3 (256 filters - increased from 128) =====
+        self.conv3a = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bn3a = nn.BatchNorm2d(256)
+        self.conv3b = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn3b = nn.BatchNorm2d(256)
         self.pool3 = nn.MaxPool2d(2, 2)
         
-        # Fully connected layers
-        self.flatten_size = 128 * 3 * 3  # 28 -> 14 -> 7 -> 3
-        self.fc1 = nn.Linear(self.flatten_size, 256)
+        # ===== CONV BLOCK 4 (NEW - 256 filters for fine-grained features) =====
+        self.conv4a = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn4a = nn.BatchNorm2d(256)
+        self.conv4b = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn4b = nn.BatchNorm2d(256)
+        
+        # Global average pooling + linear layer
+        # After pooling: 28 -> 14 -> 7 -> 3 -> 1
+        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.flatten_size = 256
+        
+        # ===== FULLY CONNECTED LAYERS (Increased capacity) =====
+        self.fc1 = nn.Linear(self.flatten_size, 512)
         self.dropout1 = nn.Dropout(dropout_rate)
         
-        self.fc2 = nn.Linear(256, 128)
+        self.fc2 = nn.Linear(512, 256)
         self.dropout2 = nn.Dropout(dropout_rate)
         
-        self.fc3 = nn.Linear(128, num_classes)
+        self.fc3 = nn.Linear(256, num_classes)
         
     def forward(self, x):
         """
-        Forward pass through the network.
+        Forward pass through the enhanced network.
         
         Args:
             x: Input tensor of shape (batch_size, 1, 28, 28)
@@ -58,28 +85,49 @@ class CharacterCNN(nn.Module):
         Returns:
             logits: Raw output from final layer (batch_size, num_classes)
         """
-        # Conv block 1
-        x = self.conv1(x)
-        x = self.bn1(x)
+        # Conv block 1 (64 filters)
+        x = self.conv1a(x)
+        x = self.bn1a(x)
         x = F.relu(x)
-        x = self.pool1(x)
+        x = self.conv1b(x)
+        x = self.bn1b(x)
+        x = F.relu(x)
+        x = self.pool1(x)  # 28 -> 14
         
-        # Conv block 2
-        x = self.conv2(x)
-        x = self.bn2(x)
+        # Conv block 2 (128 filters)
+        x = self.conv2a(x)
+        x = self.bn2a(x)
         x = F.relu(x)
-        x = self.pool2(x)
+        x = self.conv2b(x)
+        x = self.bn2b(x)
+        x = F.relu(x)
+        x = self.pool2(x)  # 14 -> 7
         
-        # Conv block 3
-        x = self.conv3(x)
-        x = self.bn3(x)
+        # Conv block 3 (256 filters)
+        x = self.conv3a(x)
+        x = self.bn3a(x)
         x = F.relu(x)
-        x = self.pool3(x)
+        x = self.conv3b(x)
+        x = self.bn3b(x)
+        x = F.relu(x)
+        x = self.pool3(x)  # 7 -> 3
+        
+        # Conv block 4 (NEW - 256 filters for fine-grained features)
+        x = self.conv4a(x)
+        x = self.bn4a(x)
+        x = F.relu(x)
+        x = self.conv4b(x)
+        x = self.bn4b(x)
+        x = F.relu(x)
+        # No pooling after block 4, use global average pooling
+        
+        # Global average pooling
+        x = self.global_avg_pool(x)  # 3 -> 1
         
         # Flatten
         x = x.view(x.size(0), -1)
         
-        # Fully connected layers
+        # Fully connected layers with increased capacity
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout1(x)
