@@ -350,7 +350,7 @@ def main():
     print(f"  Train samples: {len(train_dataset)}")
     print(f"  Val samples: {len(val_dataset)}")
     
-    print("\nInitializing model...")
+    print("\nInitializing Enhanced CNN model...")
     model = CharacterCNN(num_classes=NUM_CLASSES, dropout_rate=0.25)
     model = model.to(device)
     

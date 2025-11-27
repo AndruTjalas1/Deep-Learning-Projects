@@ -76,7 +76,7 @@ def load_models():
     global character_classifier, confidence_scorer
     
     try:
-        # Create and load character classifier
+        # Create and load Enhanced CNN
         character_classifier = CharacterCNN(num_classes=NUM_CLASSES, dropout_rate=0.25)
         
         loaded_path = None

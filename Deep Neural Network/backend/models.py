@@ -236,12 +236,126 @@ class ConfidenceScorer(nn.Module):
             return mean_predictions
 
 
+class VisionTransformer(nn.Module):
+    """
+    Vision Transformer for character/digit recognition.
+    
+    Architecture:
+    - Patch Embedding: Converts 28x28 images into patches
+    - Transformer Encoder: Multi-head self-attention layers
+    - Classification Head: MLP for final prediction
+    
+    Why ViT?
+    - Captures global context better than CNNs for small images
+    - Self-attention can focus on discriminative features
+    - Often outperforms CNNs on 28x28 character images
+    - Better at distinguishing similar characters (3 vs E, p vs b, etc.)
+    
+    Based on "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale"
+    https://arxiv.org/abs/2010.11929
+    """
+    
+    def __init__(self, num_classes=47, img_size=28, patch_size=2, embed_dim=192, 
+                 depth=6, num_heads=3, mlp_dim=768, dropout_rate=0.05):
+        super(VisionTransformer, self).__init__()
+        
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.embed_dim = embed_dim
+        
+        # Calculate number of patches (28x28 with 2x2 patches = 196 patches)
+        num_patches = (img_size // patch_size) ** 2
+        
+        # ===== PATCH EMBEDDING =====
+        # Convert image patches to embeddings
+        self.patch_embed = nn.Linear(patch_size * patch_size * 1, embed_dim)
+        
+        # Positional embeddings
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+        
+        # Class token
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        # ===== TRANSFORMER ENCODER =====
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embed_dim,
+            nhead=num_heads,
+            dim_feedforward=mlp_dim,
+            dropout=dropout_rate,
+            activation='gelu',
+            batch_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=depth)
+        
+        # Layer norm
+        self.norm = nn.LayerNorm(embed_dim)
+        
+        # ===== CLASSIFICATION HEAD =====
+        self.head = nn.Sequential(
+            nn.Linear(embed_dim, embed_dim // 2),
+            nn.GELU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(embed_dim // 2, num_classes)
+        )
+        
+        # Initialize weights
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
+    
+    def forward(self, x):
+        """
+        Forward pass through Vision Transformer.
+        
+        Args:
+            x: Input tensor of shape (batch_size, 1, 28, 28)
+            
+        Returns:
+            logits: Classification logits (batch_size, num_classes)
+        """
+        B = x.shape[0]
+        
+        # ===== PATCH EMBEDDING =====
+        # Reshape to patches: (B, 1, 28, 28) -> (B, num_patches, patch_dim)
+        patches = x.reshape(B, 1, self.img_size // self.patch_size, self.patch_size,
+                            self.img_size // self.patch_size, self.patch_size)
+        patches = patches.permute(0, 2, 4, 1, 3, 5).contiguous()
+        patches = patches.reshape(B, (self.img_size // self.patch_size) ** 2, 
+                                 self.patch_size * self.patch_size * 1)
+        
+        # Embed patches
+        x = self.patch_embed(patches)  # (B, num_patches, embed_dim)
+        
+        # Add class token
+        cls_token = self.cls_token.expand(B, -1, -1)
+        x = torch.cat([cls_token, x], dim=1)  # (B, num_patches + 1, embed_dim)
+        
+        # Add positional embeddings
+        x = x + self.pos_embed
+        x = self.dropout(x)
+        
+        # ===== TRANSFORMER ENCODER =====
+        x = self.transformer_encoder(x)
+        
+        # Layer normalization
+        x = self.norm(x)
+        
+        # Take class token
+        x = x[:, 0]  # (B, embed_dim)
+        
+        # ===== CLASSIFICATION HEAD =====
+        logits = self.head(x)
+        
+        return logits
+
+
 def create_model(model_type="cnn", num_classes=36, pretrained=False):
     """
     Factory function to create models.
     
     Args:
-        model_type: "cnn", "transfer_learning", or "confidence"
+        model_type: "cnn", "vit", "transfer_learning", or "confidence"
         num_classes: Number of output classes
         pretrained: Whether to use pretrained weights
         
@@ -250,6 +364,8 @@ def create_model(model_type="cnn", num_classes=36, pretrained=False):
     """
     if model_type == "cnn":
         return CharacterCNN(num_classes=num_classes)
+    elif model_type == "vit":
+        return VisionTransformer(num_classes=num_classes)
     elif model_type == "transfer_learning":
         return TransferLearningCNN(num_classes=num_classes)
     elif model_type == "confidence":

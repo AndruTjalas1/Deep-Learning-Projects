@@ -54,7 +54,7 @@ TRAINING = {
     "test_batch_size": 256,
     
     # Learning rate
-    "learning_rate": 0.0005,  # Reduced for more stable training across styles
+    "learning_rate": 0.001,  # Higher LR for ViT (needs stronger signals)
     
     # Optimizer
     "optimizer": "adam",  # adam, sgd, rmsprop
