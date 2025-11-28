@@ -1,0 +1,348 @@
+/* Specialist Character Grading Component Styles */
+
+.character-grading-specialist {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 20px 0;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.header p {
+    font-size: 1.1em;
+    color: #666;
+    margin: 0;
+}
+
+/* Character Type Selection */
+.character-type-selector {
+    margin-bottom: 40px;
+}
+
+.character-type-selector label {
+    display: block;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.button-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.type-button {
+    padding: 15px 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+}
+
+.type-button:hover:not(:disabled) {
+    border-color: #2c3e50;
+    background: #f9f9f9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.type-button.active {
+    border-color: #3498db;
+    background: #3498db;
+    color: white;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.type-button.active .icon {
+    font-size: 1.8em;
+}
+
+.type-button.active .label {
+    font-weight: 700;
+}
+
+.type-button .icon {
+    font-size: 1.6em;
+}
+
+.type-button .label {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.type-button .range {
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+.type-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Canvas Section */
+.canvas-section {
+    background: #f9f9f9;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.canvas-wrapper {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.drawing-canvas {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: block;
+    margin: 0 auto;
+    background: white !important;
+}
+
+.canvas-label {
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.95em;
+}
+
+/* Button Controls */
+.button-controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 30px;
+    font-size: 1em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.btn-clear {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-clear:hover:not(:disabled) {
+    background: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn-submit {
+    background: #27ae60;
+    color: white;
+    min-width: 150px;
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: #229954;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Results Section */
+.results-section {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Grade Display */
+.grade-display {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 25px;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.grade-badge {
+    font-size: 4em;
+    font-weight: 900;
+    min-width: 120px;
+    text-align: center;
+}
+
+.prediction-info h2 {
+    margin: 0 0 10px 0;
+    font-size: 1.8em;
+    color: #333;
+}
+
+.predicted-char {
+    font-size: 2em;
+    font-weight: 700;
+    color: #3498db;
+}
+
+.confidence {
+    margin: 5px 0 0 0;
+    font-size: 1.1em;
+    color: #666;
+}
+
+/* Feedback Message */
+.feedback-message {
+    background: #f0f9ff;
+    border-left: 5px solid #3498db;
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.feedback-message p {
+    margin: 0;
+    font-size: 1em;
+    color: #333;
+}
+
+/* Alternatives Section */
+.alternatives-section {
+    margin-bottom: 20px;
+}
+
+.alternatives-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.alternatives-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px;
+}
+
+.alternative-item {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.alternative-item:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.alt-char {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.alt-confidence {
+    font-size: 0.85em;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Debug Info */
+.debug-info {
+    text-align: center;
+    color: #999;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Error Message */
+.error-message {
+    background: #fadbd8;
+    border: 2px solid #e74c3c;
+    border-radius: 8px;
+    padding: 15px 20px;
+    color: #c0392b;
+    margin-top: 20px;
+}
+
+.error-message p {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .character-grading-specialist {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 1.8em;
+    }
+
+    .button-group {
+        grid-template-columns: 1fr;
+    }
+
+    .grade-display {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .grade-badge {
+        font-size: 3em;
+    }
+
+    .canvas-section {
+        padding: 15px;
+    }
+
+    .drawing-canvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .alternatives-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

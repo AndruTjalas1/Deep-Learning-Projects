@@ -56,6 +56,42 @@ export const recognizeSentence = async (imageBlob) => {
 }
 
 /**
+ * Recognize a single character with specialist model
+ * @param {Blob} imageBlob - Canvas image as blob
+ * @param {string} characterType - 'digit', 'uppercase', or 'lowercase'
+ * @returns {Promise} Recognition result with grade and top predictions
+ */
+export const recognizeCharacterSpecialist = async (imageBlob, characterType = 'digit') => {
+  try {
+    const base64Image = await blobToBase64(imageBlob)
+    const response = await api.post('/recognize/character/specialist', {
+      image: base64Image,
+      character_type: characterType
+    })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || { error: error.message }
+  }
+}
+
+/**
+ * Recognize handwritten text with auto-routing using character-type classifier
+ * @param {Blob} imageBlob - Canvas image as blob
+ * @returns {Promise} Recognition result with recognized text and per-character details
+ */
+export const recognizeText = async (imageBlob) => {
+  try {
+    const base64Image = await blobToBase64(imageBlob)
+    const response = await api.post('/recognize/text', {
+      image: base64Image,
+    })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || { error: error.message }
+  }
+}
+
+/**
  * Health check endpoint
  * @returns {Promise} Server status
  */

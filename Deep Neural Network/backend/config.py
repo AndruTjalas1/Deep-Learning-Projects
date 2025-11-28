@@ -60,4 +60,32 @@ EMNIST_CLASSES = [
 CHAR_TO_IDX = {char: idx for idx, char in enumerate(EMNIST_CLASSES)}
 IDX_TO_CHAR = {idx: char for char, idx in CHAR_TO_IDX.items()}
 
+# ============================================================================
+# 3-MODEL SPECIALIST SYSTEM
+# ============================================================================
+# Character type classes for specialist models
+DIGIT_CLASSES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+UPPERCASE_CLASSES = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+LOWERCASE_CLASSES = ['a', 'b', 'd', 'e', 'f', 'g', 'h', 'n', 'q', 'r', 't']
+
+# Mappings for each specialist model
+DIGIT_CHAR_TO_IDX = {char: idx for idx, char in enumerate(DIGIT_CLASSES)}
+DIGIT_IDX_TO_CHAR = {idx: char for char, idx in DIGIT_CHAR_TO_IDX.items()}
+
+UPPERCASE_CHAR_TO_IDX = {char: idx for idx, char in enumerate(UPPERCASE_CLASSES)}
+UPPERCASE_IDX_TO_CHAR = {idx: char for char, idx in UPPERCASE_CHAR_TO_IDX.items()}
+
+LOWERCASE_CHAR_TO_IDX = {char: idx for idx, char in enumerate(LOWERCASE_CLASSES)}
+LOWERCASE_IDX_TO_CHAR = {idx: char for char, idx in LOWERCASE_CHAR_TO_IDX.items()}
+
+# Combined mapping from EMNIST index to specialist model info
+MODEL_TYPE_FOR_CLASS = {}
+for idx, char in enumerate(EMNIST_CLASSES):
+    if char in DIGIT_CLASSES:
+        MODEL_TYPE_FOR_CLASS[idx] = ('digit', DIGIT_CHAR_TO_IDX[char])
+    elif char in UPPERCASE_CLASSES:
+        MODEL_TYPE_FOR_CLASS[idx] = ('uppercase', UPPERCASE_CHAR_TO_IDX[char])
+    elif char in LOWERCASE_CLASSES:
+        MODEL_TYPE_FOR_CLASS[idx] = ('lowercase', LOWERCASE_CHAR_TO_IDX[char])
+
 print(f"Configuration loaded. Base directory: {BASE_DIR}")

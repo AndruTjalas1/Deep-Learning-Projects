@@ -148,7 +148,7 @@ export const SentenceResult = ({ result, loading }) => {
         </div>
         <div className="metric-card">
           <div className="metric-value">
-            {(result.success_rate * 100).toFixed(1)}%
+            {(result.success_rate).toFixed(1)}%
           </div>
           <div className="metric-label">Success Rate</div>
         </div>

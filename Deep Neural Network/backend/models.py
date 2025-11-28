@@ -373,3 +373,61 @@ def create_model(model_type="cnn", num_classes=36, pretrained=False):
         return ConfidenceScorer(base_model)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
+
+
+class LightCharacterTypeClassifier(nn.Module):
+    """
+    Lightweight classifier for character type (digit/uppercase/lowercase).
+    
+    Purpose: Automatically detect the type of a handwritten character
+    to route it to the correct specialist model.
+    
+    Architecture:
+    - Input: 28x28 grayscale image
+    - Conv Block 1: 32 filters, 3x3 kernel
+    - Conv Block 2: 64 filters, 3x3 kernel
+    - Global Average Pooling
+    - Output: 3 classes (digit, uppercase, lowercase)
+    
+    Model Size: ~200KB (very lightweight)
+    Inference Time: ~1ms per character
+    """
+    
+    def __init__(self, num_classes=3):
+        super(LightCharacterTypeClassifier, self).__init__()
+        
+        # Lightweight architecture - 2 conv blocks only
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.relu = nn.ReLU(inplace=True)
+        self.pool = nn.MaxPool2d(2, 2)
+        
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        
+        # Global average pooling
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        
+        # Classification head
+        self.fc = nn.Linear(64, num_classes)
+    
+    def forward(self, x):
+        # Conv Block 1
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        
+        # Conv Block 2
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        
+        # Global pooling
+        x = self.global_pool(x)
+        x = x.view(x.size(0), -1)
+        
+        # Classification
+        x = self.fc(x)
+        return x

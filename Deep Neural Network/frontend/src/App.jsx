@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Canvas from './components/Canvas'
+import CharacterGradingSpecialist from './components/CharacterGradingSpecialist'
 import { ResultDisplay } from './components/ResultDisplay'
 import { recognizeCharacter, recognizeSentence, healthCheck } from './api'
 import './App.css'
@@ -110,17 +111,22 @@ function App() {
             </div>
           )}
 
-          <Canvas
-            onDraw={handleDraw}
-            mode={activeTab}
-            isLoading={loading}
-          />
-
-          <ResultDisplay
-            result={result}
-            loading={loading}
-            mode={activeTab}
-          />
+          {activeTab === 'character' ? (
+            <CharacterGradingSpecialist />
+          ) : (
+            <>
+              <Canvas
+                onDraw={handleDraw}
+                mode={activeTab}
+                isLoading={loading}
+              />
+              <ResultDisplay
+                result={result}
+                loading={loading}
+                mode={activeTab}
+              />
+            </>
+          )}
         </div>
       </main>
 

@@ -28,7 +28,9 @@ from models import CharacterCNN, ConfidenceScorer
 from segmentation import batch_segment_and_standardize, preprocess_image
 from config import (
     DATA_DIR, MODELS_DIR, NUM_CLASSES, IMG_SIZE, 
-    CHAR_TO_IDX, IDX_TO_CHAR
+    CHAR_TO_IDX, IDX_TO_CHAR,
+    DIGIT_CLASSES, UPPERCASE_CLASSES, LOWERCASE_CLASSES,
+    DIGIT_IDX_TO_CHAR, UPPERCASE_IDX_TO_CHAR, LOWERCASE_IDX_TO_CHAR
 )
 
 # ============================================================
@@ -68,99 +70,90 @@ app.add_middleware(
 # MODEL LOADING
 # ============================================================
 
-character_classifier = None
+# Specialist models for each character type
+specialist_models = {
+    'digit': None,
+    'uppercase': None,
+    'lowercase': None
+}
+character_type_classifier = None  # NEW: Light classifier for auto-routing
 confidence_scorer = None
 
-def load_models():
-    """Load pretrained models from disk."""
-    global character_classifier, confidence_scorer
+def load_specialist_models():
+    """Load specialist models for each character type."""
+    global specialist_models, character_type_classifier, confidence_scorer
     
     try:
-        # Create and load Enhanced CNN
-        character_classifier = CharacterCNN(num_classes=NUM_CLASSES, dropout_rate=0.25)
+        print("\nLoading Specialist Models...")
         
-        loaded_path = None
-        
-        # STRATEGY: Use epoch 63 which achieved the best validation accuracy (89.69%)
-        # This epoch generalizes best across writing styles
-        preferred_epochs = [50,45,40,35,30, 25, 20, 15, 10, 5, 2, 1]  # Try these in order
-        for epoch_num in preferred_epochs:
-            candidate = MODELS_DIR / f"epoch_{epoch_num:03d}.pt"
-            if candidate.exists():
-                try:
-                    character_classifier.load_state_dict(torch.load(candidate, map_location=device))
-                    loaded_path = candidate
-                    sample_param = list(character_classifier.parameters())[0]
-                    print(f"\n✓ Loaded character classifier from {candidate} (epoch {epoch_num} - better generalization)")
-                    print(f"  DEBUG - First layer weight stats:")
-                    print(f"    Mean: {sample_param.mean():.6f}, Std: {sample_param.std():.6f}")
-                    break
-                except Exception as e:
-                    print(f"Warning: Error loading {candidate}: {e}")
-        
-        # If preferred epochs not found, find the latest epoch model
-        if loaded_path is None:
-            epoch_models = sorted(MODELS_DIR.glob("epoch_*.pt"), reverse=True)
-            if epoch_models:
-                latest_epoch_path = epoch_models[0]
-                try:
-                    character_classifier.load_state_dict(torch.load(latest_epoch_path, map_location=device))
-                    loaded_path = latest_epoch_path
-                    sample_param = list(character_classifier.parameters())[0]
-                    print(f"\n✓ Loaded character classifier from {latest_epoch_path} (latest epoch)")
-                    print(f"  DEBUG - First layer weight stats:")
-                    print(f"    Mean: {sample_param.mean():.6f}, Std: {sample_param.std():.6f}")
-                except Exception as e:
-                    print(f"Warning: Error loading {latest_epoch_path}: {e}")
-        
-        # Fallback to character_cnn.pt if no epoch model found
-        if loaded_path is None:
-            model_path = MODELS_DIR / "character_cnn.pt"
+        # Load each specialist model
+        for model_type in ['digit', 'uppercase', 'lowercase']:
+            if model_type == 'digit':
+                num_classes = len(DIGIT_CLASSES)
+            elif model_type == 'uppercase':
+                num_classes = len(UPPERCASE_CLASSES)
+            else:
+                num_classes = len(LOWERCASE_CLASSES)
+            
+            # Create model
+            model = CharacterCNN(num_classes=num_classes, dropout_rate=0.25)
+            
+            # Try to load best model
+            model_path = MODELS_DIR / f"best_{model_type}_model.pt"
             if model_path.exists():
                 try:
-                    character_classifier.load_state_dict(torch.load(model_path, map_location=device))
-                    loaded_path = model_path
-                    sample_param = list(character_classifier.parameters())[0]
-                    print(f"\n✓ Loaded character classifier from {model_path}")
-                    print(f"  DEBUG - First layer weight stats:")
-                    print(f"    Mean: {sample_param.mean():.6f}, Std: {sample_param.std():.6f}")
+                    model.load_state_dict(torch.load(model_path, map_location=device))
+                    specialist_models[model_type] = model.to(device).eval()
+                    print(f"✓ Loaded {model_type} specialist model from {model_path}")
                 except Exception as e:
-                    print(f"Warning: Error loading {model_path}: {e}")
+                    print(f"Warning: Failed to load {model_type} model: {e}")
+                    print(f"  Using untrained model for {model_type}")
+                    specialist_models[model_type] = model.to(device).eval()
+            else:
+                print(f"⚠ No trained model found for {model_type} at {model_path}")
+                print(f"  Using untrained model - please train first!")
+                specialist_models[model_type] = model.to(device).eval()
         
-        # If still no model, try character_cnn_best.pt
-        if loaded_path is None:
-            backup_model_path = MODELS_DIR / "character_cnn_best.pt"
-            if backup_model_path.exists():
-                try:
-                    character_classifier.load_state_dict(torch.load(backup_model_path, map_location=device))
-                    loaded_path = backup_model_path
-                    sample_param = list(character_classifier.parameters())[0]
-                    print(f"\n✓ Loaded character classifier from {backup_model_path} (legacy)")
-                    print(f"  DEBUG - First layer weight stats:")
-                    print(f"    Mean: {sample_param.mean():.6f}, Std: {sample_param.std():.6f}")
-                except Exception as e:
-                    print(f"Warning: Error loading {backup_model_path}: {e}")
+        # NEW: Load character type classifier
+        print("\nLoading Character Type Classifier...")
+        from models import LightCharacterTypeClassifier
+        character_type_classifier = LightCharacterTypeClassifier(num_classes=3)
+        classifier_path = MODELS_DIR / "character_type_classifier.pt"
         
-        # If nothing worked, show warning
-        if loaded_path is None:
-            sample_param = list(character_classifier.parameters())[0]
-            print(f"\n✗ WARNING: No trained model found. Using untrained model with random weights!")
-            print(f"  DEBUG - First layer weight stats (SHOULD BE RANDOM):")
-            print(f"    Mean: {sample_param.mean():.6f}, Std: {sample_param.std():.6f}")
+        if classifier_path.exists():
+            try:
+                character_type_classifier.load_state_dict(torch.load(classifier_path, map_location=device))
+                character_type_classifier = character_type_classifier.to(device).eval()
+                print(f"✓ Loaded character type classifier from {classifier_path}")
+            except Exception as e:
+                print(f"Warning: Failed to load character type classifier: {e}")
+                print(f"  Using untrained classifier - please train first!")
+                character_type_classifier = character_type_classifier.to(device).eval()
+        else:
+            print(f"⚠ No trained classifier found at {classifier_path}")
+            print(f"  Run: python train_character_type_classifier.py")
+            character_type_classifier = character_type_classifier.to(device).eval()
         
-        character_classifier.to(device)
-        character_classifier.eval()
+        # Create confidence scorer using digit model as reference
+        if specialist_models['digit'] is not None:
+            confidence_scorer = ConfidenceScorer(specialist_models['digit'])
+            confidence_scorer.to(device)
+            confidence_scorer.base_model.eval()
         
-        # Create confidence scorer
-        confidence_scorer = ConfidenceScorer(character_classifier)
-        confidence_scorer.to(device)
-        confidence_scorer.base_model.eval()
-        
-        print("Models loaded successfully")
+        print("✓ All specialist models and classifier loaded successfully\n")
         
     except Exception as e:
-        print(f"Error loading models: {e}")
+        print(f"Error loading specialist models: {e}")
         raise
+
+
+# Keep backward compatibility
+character_classifier = None
+def load_models():
+    """Backward compatibility wrapper - loads specialist models."""
+    global character_classifier
+    load_specialist_models()
+    character_classifier = specialist_models['digit']  # Default to digit model
 
 
 def grade_character(confidence, predicted_char):
@@ -204,6 +197,95 @@ async def health_check():
         "device": str(device),
         "models_loaded": character_classifier is not None
     }
+
+
+@app.post("/recognize/character/specialist")
+async def recognize_character_specialist(data: dict):
+    """
+    SPECIALIST MODEL ENDPOINT: Single Character Recognition with User-Selected Type
+    
+    User selects character type: "digit", "uppercase", or "lowercase"
+    Routes to the appropriate specialist model.
+    
+    Expected POST data:
+    - image: Base64 encoded image data
+    - character_type: "digit", "uppercase", or "lowercase"
+    
+    Returns:
+        JSON with prediction, grade, confidence, and top predictions from specialist model
+    """
+    try:
+        # Get parameters
+        image_base64 = data.get("image")
+        character_type = data.get("character_type", "digit").lower()
+        
+        if not image_base64:
+            raise HTTPException(status_code=400, detail="No image provided")
+        
+        if character_type not in ['digit', 'uppercase', 'lowercase']:
+            raise HTTPException(status_code=400, detail="Invalid character_type. Must be 'digit', 'uppercase', or 'lowercase'")
+        
+        # Get appropriate model and class mappings
+        model = specialist_models[character_type]
+        if model is None:
+            raise HTTPException(status_code=500, detail=f"Specialist model for {character_type} not loaded")
+        
+        if character_type == 'digit':
+            idx_to_char = DIGIT_IDX_TO_CHAR
+        elif character_type == 'uppercase':
+            idx_to_char = UPPERCASE_IDX_TO_CHAR
+        else:
+            idx_to_char = LOWERCASE_IDX_TO_CHAR
+        
+        # Decode base64 to image
+        if "," in image_base64:
+            image_base64 = image_base64.split(",")[1]
+        
+        import base64
+        image_data = base64.b64decode(image_base64)
+        canvas_image = Image.open(io.BytesIO(image_data))
+        
+        # Preprocess image
+        processed_image = preprocess_image(canvas_image, target_size=IMG_SIZE)
+        input_tensor = torch.from_numpy(processed_image).unsqueeze(0).to(device)
+        
+        # Run inference with specialist model
+        with torch.no_grad():
+            logits = model(input_tensor)
+            probabilities = F.softmax(logits, dim=1)
+        
+        # Get prediction
+        pred_idx = torch.argmax(probabilities[0]).item()
+        confidence = probabilities[0][pred_idx].item()
+        predicted_char = idx_to_char[pred_idx]
+        
+        # Grade the character
+        grade_info = grade_character(confidence, predicted_char)
+        
+        # Get top 3 predictions
+        top_probs, top_indices = torch.topk(probabilities[0], min(3, len(idx_to_char)))
+        top_predictions = [
+            {
+                "character": idx_to_char[idx.item()],
+                "confidence": prob.item(),
+                "rank": i + 1
+            }
+            for i, (prob, idx) in enumerate(zip(top_probs, top_indices))
+        ]
+        
+        return {
+            "success": True,
+            "character_type": character_type,
+            "predicted_character": predicted_char,
+            "confidence": round(confidence, 4),
+            "grade_info": grade_info,
+            "top_predictions": top_predictions,
+            "inference_device": str(device)
+        }
+        
+    except Exception as e:
+        print(f"Error in recognize_character_specialist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/recognize/character")
@@ -291,6 +373,150 @@ async def recognize_character(data: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/recognize/text")
+async def recognize_text(data: dict):
+    """
+    OCR ENDPOINT: Handwritten Text Recognition with Auto-Routing
+    
+    Recognizes mixed-case handwritten text automatically using:
+    1. Character segmentation to extract individual characters
+    2. Light classifier to detect type (digit/uppercase/lowercase)
+    3. Specialist models to recognize each character
+    
+    Expected POST data:
+    - image: Base64 encoded image of handwritten text
+    
+    Returns:
+        JSON with:
+        - recognized_text: Full recognized text string
+        - character_details: Per-character predictions and confidence
+        - overall_confidence: Average confidence across all characters
+    """
+    try:
+        import base64
+        
+        # Get image
+        image_base64 = data.get("image")
+        if not image_base64:
+            raise HTTPException(status_code=400, detail="No image provided")
+        
+        # Decode base64
+        if "," in image_base64:
+            image_base64 = image_base64.split(",")[1]
+        
+        image_data = base64.b64decode(image_base64)
+        text_image = Image.open(io.BytesIO(image_data))
+        
+        # Convert to RGB if needed
+        if text_image.mode not in ['RGB', 'L']:
+            text_image = text_image.convert('RGB')
+        
+        # Segment the image into individual characters
+        char_batch, bounding_boxes = batch_segment_and_standardize(text_image, target_size=IMG_SIZE)
+        
+        if char_batch.shape[0] == 0:
+            return {
+                "success": False,
+                "error": "No characters detected in image",
+                "recognized_text": "",
+                "character_details": []
+            }
+        
+        # Process each segmented character
+        recognized_text = ""
+        character_details = []
+        confidences = []
+        
+        for idx, char_image in enumerate(char_batch):
+            try:
+                # Convert to tensor
+                if isinstance(char_image, np.ndarray):
+                    char_tensor = torch.from_numpy(char_image).unsqueeze(0).to(device)
+                else:
+                    # Already a tensor
+                    char_tensor = char_image.unsqueeze(0).to(device)
+                
+                # Step 1: Classify character type using light classifier
+                with torch.no_grad():
+                    type_logits = character_type_classifier(char_tensor)
+                    type_probs = F.softmax(type_logits, dim=1)
+                
+                char_type_idx = torch.argmax(type_probs[0]).item()
+                char_type_names = ['digit', 'uppercase', 'lowercase']
+                detected_type = char_type_names[char_type_idx]
+                type_confidence = type_probs[0][char_type_idx].item()
+                
+                # Step 2: Route to appropriate specialist model
+                if detected_type == 'digit':
+                    specialist_model = specialist_models['digit']
+                    idx_to_char_map = DIGIT_IDX_TO_CHAR
+                elif detected_type == 'uppercase':
+                    specialist_model = specialist_models['uppercase']
+                    idx_to_char_map = UPPERCASE_IDX_TO_CHAR
+                else:
+                    specialist_model = specialist_models['lowercase']
+                    idx_to_char_map = LOWERCASE_IDX_TO_CHAR
+                
+                # Step 3: Get character prediction from specialist model
+                with torch.no_grad():
+                    char_logits = specialist_model(char_tensor)
+                    char_probs = F.softmax(char_logits, dim=1)
+                
+                char_pred_idx = torch.argmax(char_probs[0]).item()
+                char_confidence = char_probs[0][char_pred_idx].item()
+                predicted_char = idx_to_char_map[char_pred_idx]
+                
+                # Step 4: Get top 3 alternatives
+                top_probs, top_indices = torch.topk(char_probs[0], min(3, len(idx_to_char_map)))
+                alternatives = [
+                    {
+                        "character": idx_to_char_map[idx.item()],
+                        "confidence": prob.item(),
+                        "rank": i + 1
+                    }
+                    for i, (prob, idx) in enumerate(zip(top_probs, top_indices))
+                ]
+                
+                # Add to results
+                recognized_text += predicted_char
+                confidences.append(char_confidence)
+                
+                character_details.append({
+                    "position": idx,
+                    "predicted_character": predicted_char,
+                    "confidence": round(char_confidence, 4),
+                    "detected_type": detected_type,
+                    "type_confidence": round(type_confidence, 4),
+                    "alternatives": alternatives
+                })
+                
+            except Exception as char_error:
+                print(f"Error processing character {idx}: {char_error}")
+                character_details.append({
+                    "position": idx,
+                    "error": str(char_error),
+                    "predicted_character": "?"
+                })
+        
+        # Calculate overall confidence
+        overall_confidence = np.mean(confidences) if confidences else 0.0
+        
+        return {
+            "success": True,
+            "recognized_text": recognized_text,
+            "character_count": len(recognized_text),
+            "character_details": character_details,
+            "overall_confidence": round(overall_confidence, 4),
+            "inference_device": str(device)
+        }
+        
+    except Exception as e:
+        print(f"Error in recognize_text: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/recognize/sentence")
 async def recognize_sentence(data: dict):
     """
@@ -359,45 +585,76 @@ async def recognize_sentence(data: dict):
         except Exception as tensor_error:
             raise HTTPException(status_code=500, detail=f"Tensor conversion error: {str(tensor_error)}")
         
-        # Run inference on all characters
-        try:
-            with torch.no_grad():
-                logits = character_classifier(input_tensor)
-                probabilities = F.softmax(logits, dim=1)
-        except Exception as inference_error:
-            raise HTTPException(status_code=500, detail=f"Model inference error: {str(inference_error)}")
+        # Process each character with character-type classifier + specialist routing
+        recognized_text = ""
+        character_results = []
+        confidences = []
+        type_predictions = []  # Track what type each was classified as
         
-        # Extract predictions
-        pred_indices = torch.argmax(probabilities, dim=1)
-        confidences = torch.max(probabilities, dim=1)[0]
+        for char_idx, char_image in enumerate(segmented_images):
+            try:
+                # Prepare single character tensor
+                char_tensor = torch.from_numpy(char_image).unsqueeze(0).to(device)
+                
+                # Step 1: Classify character type using light classifier
+                with torch.no_grad():
+                    type_logits = character_type_classifier(char_tensor)
+                    type_probs = F.softmax(type_logits, dim=1)
+                
+                char_type_idx = torch.argmax(type_probs[0]).item()
+                char_type_names = ['digit', 'uppercase', 'lowercase']
+                detected_type = char_type_names[char_type_idx]
+                type_confidence = type_probs[0][char_type_idx].item()
+                
+                # Step 2: Route to appropriate specialist model
+                if detected_type == 'digit':
+                    specialist_model = specialist_models['digit']
+                    idx_to_char_map = DIGIT_IDX_TO_CHAR
+                elif detected_type == 'uppercase':
+                    specialist_model = specialist_models['uppercase']
+                    idx_to_char_map = UPPERCASE_IDX_TO_CHAR
+                else:  # lowercase
+                    specialist_model = specialist_models['lowercase']
+                    idx_to_char_map = LOWERCASE_IDX_TO_CHAR
+                
+                # Step 3: Get character prediction from specialist model
+                with torch.no_grad():
+                    char_logits = specialist_model(char_tensor)
+                    char_probs = F.softmax(char_logits, dim=1)
+                
+                char_pred_idx = torch.argmax(char_probs[0]).item()
+                char_confidence = char_probs[0][char_pred_idx].item()
+                predicted_char = idx_to_char_map[char_pred_idx]
+                
+                recognized_text += predicted_char
+                confidences.append(char_confidence)
+                type_predictions.append(detected_type)
+                
+                character_results.append({
+                    "character": predicted_char,
+                    "confidence": round(char_confidence, 4),
+                    "detected_type": detected_type,
+                    "type_confidence": round(type_confidence, 4)
+                })
+                
+            except Exception as char_error:
+                print(f"Error processing character {char_idx}: {char_error}")
+                character_results.append({
+                    "character": "?",
+                    "error": str(char_error)
+                })
         
         # DEBUG: Show predictions for sentence
         print(f"\nDEBUG recognize_sentence:")
-        print(f"  Total characters detected: {len(pred_indices)}")
-        print(f"  Predictions: {[IDX_TO_CHAR[idx.item()] for idx in pred_indices[:10]]}")
-        print(f"  Confidences: {[f'{c:.4f}' for c in confidences[:10].tolist()]}")
-        
-        recognized_text = ""
-        character_results = []
-        
-        for pred_idx, confidence in zip(pred_indices, confidences):
-            pred_char = IDX_TO_CHAR[pred_idx.item()]
-            conf_value = confidence.item()
-            recognized_text += pred_char
-            
-            # Grade each character
-            grade_info = grade_character(conf_value, pred_char)
-            
-            character_results.append({
-                "character": pred_char,
-                "confidence": round(conf_value, 4),
-                "grade": grade_info["grade"]
-            })
+        print(f"  Total characters detected: {len(recognized_text)}")
+        print(f"  Predictions: {list(recognized_text)}")
+        print(f"  Types detected: {type_predictions}")
+        print(f"  Confidences: {[f'{c:.4f}' for c in confidences]}")
         
         # Calculate statistics
-        if confidences.numel() > 0:
-            avg_confidence = confidences.mean().item()
-            success_count = (confidences > 0.7).sum().item()
+        if len(confidences) > 0:
+            avg_confidence = np.mean(confidences)
+            success_count = sum(1 for c in confidences if c > 0.7)
             success_rate = (success_count / len(confidences)) * 100
         else:
             avg_confidence = 0
