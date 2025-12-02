@@ -9,14 +9,12 @@ const API_BASE = (import.meta?.env?.VITE_API_BASE ?? "http://localhost:8000").re
 const STREAMLIT_URL = "https://cst-435-bxasfo3v8izfkfavktqpew.streamlit.app/";
 
 const PROJECTS = [
-  { id: 1, title: "Perceptron", subtitle: "Project 1", emoji: "🧠", slug: "project-1" },
-  { id: 2, title: "Artificial Neural Network (ANN)", subtitle: "Project 2", emoji: "🧩", slug: "project-2" },
-  { id: 3, title: "Neural Network", subtitle: "Project 3", emoji: "🕸️", slug: "project-3" },
-  { id: 4, title: "NLP Application", subtitle: "Project 4", emoji: "🗣️", slug: "project-4" },
-  { id: 5, title: "Recurrent Neural Network", subtitle: "Project 5", emoji: "🎨", slug: "project-5" },
-  { id: 6, title: "Deep Neural Network Performance", subtitle: "Project 6", emoji: "⚙️", slug: "project-6" },
-  { id: 7, title: "GAN-Based Application", subtitle: "Project 7", emoji: "🧪", slug: "project-7" },
-  { id: 8, title: "Deep Neural Network Project", subtitle: "Project 8", emoji: "☁️", slug: "project-8" },
+  { id: 1, title: "Interior Designer", subtitle: "Project 1", emoji: "", slug: "project-1" },
+  { id: 2, title: "Sea Animal Identifier", subtitle: "Project 2", emoji: "", slug: "project-3" },
+  { id: 3, title: "Review Analysis", subtitle: "Project 3", emoji: "", slug: "project-4" },
+  { id: 4, title: "Story Generator", subtitle: "Project 4", emoji: "", slug: "project-5" },
+  { id: 5, title: "Cat and Dog Image Generator", subtitle: "Project 5", emoji: "", slug: "project-7" },
+  { id: 6, title: "Handwriting Training", subtitle: "Project 6", emoji: "", slug: "project-8" },
 ];
 
 export default function App() {
@@ -44,16 +42,20 @@ export default function App() {
   };
 
   const handleDetails = (id, title) => {
-    if (id >= 1 && id <= 4) {
+    if (id >= 1 && id <= 3) {
       alert(`${title}\nStreamlit → Vercel + Railway conversion coming soon.`);
       return;
     }
-    if (id === 5) {
-      alert(`${title}\nThis RNN app is live. Explore it on the /rnn/ page.`);
+    if (id === 4) {
+      alert(`${title}\nLSTM-based text generation system using deep learning. Trained on text data and deployed with FastAPI backend and React frontend.`);
       return;
     }
-    if (id === 7) {
-      alert(`${title}\nGAN image generator launches from /gan/ and connects to Railway.`);
+    if (id === 6) {
+      alert(`${title}\nCNN-based handwriting recognition with character segmentation. Recognizes individual characters and continuous text with confidence scoring.`);
+      return;
+    }
+    if (id === 5) {
+      alert(`${title}\nDCGAN system for generating images of cats and dogs. Features real-time training monitoring, GPU acceleration, and full-stack deployment.`);
       return;
     }
 
@@ -70,7 +72,6 @@ export default function App() {
       <section className="grid">
         {PROJECTS.map(({ id, title, subtitle, emoji, slug }) => (
           <article key={id} className="card" tabIndex={0}>
-            <div className="badge">{emoji}</div>
             <h2 className="cardTitle">{title}</h2>
             <p className="cardText">{subtitle}</p>
             <div className="actions">
