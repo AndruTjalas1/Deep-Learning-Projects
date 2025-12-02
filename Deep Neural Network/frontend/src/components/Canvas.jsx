@@ -21,7 +21,7 @@ const Canvas = ({ onDraw, mode = 'character', isLoading = false }) => {
   const [isDrawing, setIsDrawing] = React.useState(false)
   const [context, setContext] = React.useState(null)
   const [imageHistory, setImageHistory] = React.useState([])
-  const [brushSize, setBrushSize] = React.useState(3)
+  const [brushSize, setBrushSize] = React.useState(8)
 
   // Initialize canvas
   useEffect(() => {
@@ -179,8 +179,8 @@ const Canvas = ({ onDraw, mode = 'character', isLoading = false }) => {
       <div className="canvas-header">
         <h2>
           {mode === 'character'
-            ? '✏️ Draw a Character or Digit'
-            : '✏️ Write a Sentence'}
+            ? 'Draw a Character or Digit'
+            : 'Write a Sentence'}
         </h2>
         <p className="info-text">
           {mode === 'character'

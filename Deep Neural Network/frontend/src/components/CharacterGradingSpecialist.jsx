@@ -97,20 +97,13 @@ export default function CharacterGradingSpecialist() {
         return colors[grade] || '#333';
     };
 
-    const getTypeIcon = (type) => {
-        const icons = {
-            'digit': '📊',
-            'uppercase': '🔤',
-            'lowercase': '📝'
-        };
-        return icons[type] || '';
-    };
+
 
     return (
         <div className="character-grading-specialist">
             {/* Header */}
             <div className="header">
-                <h1>✍️ Handwriting Character Grading</h1>
+                <h1>Handwriting Character Grading</h1>
                 <p>Draw a character and get instant feedback!</p>
             </div>
 
@@ -123,7 +116,7 @@ export default function CharacterGradingSpecialist() {
                         onClick={() => setCharacterType('digit')}
                         disabled={loading}
                     >
-                        <span className="icon">📊</span>
+                        <span className="icon"></span>
                         <span className="label">Digit</span>
                         <span className="range">(0-9)</span>
                     </button>
@@ -132,7 +125,7 @@ export default function CharacterGradingSpecialist() {
                         onClick={() => setCharacterType('uppercase')}
                         disabled={loading}
                     >
-                        <span className="icon">🔤</span>
+                        <span className="icon"></span>
                         <span className="label">Uppercase</span>
                         <span className="range">(A-Z)</span>
                     </button>
@@ -141,7 +134,7 @@ export default function CharacterGradingSpecialist() {
                         onClick={() => setCharacterType('lowercase')}
                         disabled={loading}
                     >
-                        <span className="icon">📝</span>
+                        <span className="icon"></span>
                         <span className="label">Lowercase</span>
                         <span className="range">(a-z)</span>
                     </button>

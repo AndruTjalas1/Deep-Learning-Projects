@@ -63,22 +63,22 @@ function App() {
       <header className="app-header">
         <div className="container">
           <div className="header-content">
-            <h1>🎨 Handwriting Recognition System</h1>
+            <h1>Handwriting Recognition System</h1>
             <p className="tagline">
               Draw letters, numbers, or sentences to see AI recognition in action
             </p>
             <div className="server-status">
               {serverStatus?.error ? (
                 <span className="status error">
-                  ⚠️ Server Offline
+                  Server Offline
                 </span>
               ) : serverStatus ? (
                 <span className="status online">
-                  ✓ Server Online
+                  Server Online
                 </span>
               ) : (
                 <span className="status loading">
-                  ⏳ Checking...
+                  Checking...
                 </span>
               )}
             </div>
@@ -93,14 +93,14 @@ function App() {
               className={`tab-btn ${activeTab === 'character' ? 'active' : ''}`}
               onClick={() => switchTab('character')}
             >
-              <span className="tab-icon">🔤</span>
+              <span className="tab-icon"></span>
               Character Recognition
             </button>
             <button
               className={`tab-btn ${activeTab === 'sentence' ? 'active' : ''}`}
               onClick={() => switchTab('sentence')}
             >
-              <span className="tab-icon">✍️</span>
+              <span className="tab-icon"></span>
               Text to Speech
             </button>
           </div>
