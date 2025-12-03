@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { rnnApi as api } from '../services/rnnApi';
 import './ModelInfo.css';
 
 const ModelInfo = () => {
@@ -17,11 +17,11 @@ const ModelInfo = () => {
       setLoading(true);
       setError('');
       
-      const infoResponse = await api.getModelInfo();
+      const infoResponse = await api.modelInfo();
       setModelInfo(infoResponse);
       
       try {
-        const statsResponse = await api.getStats();
+        const statsResponse = await api.modelInfo();
         setStats(statsResponse);
       } catch (statsError) {
         console.log('Could not fetch stats:', statsError);

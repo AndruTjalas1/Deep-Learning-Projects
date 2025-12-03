@@ -20,20 +20,26 @@ const PROJECTS = [
 export default function App() {
 
   const handleLaunch = (slug, id) => {
-    if (id >= 1 && id <= 4) {
+    if (id >= 1 && id <= 3) {
       window.location.href = STREAMLIT_URL;
       return;
     }
 
-    if (id === 5) {
+    if (id === 4) {
       // RNN app
       window.location.href = "/rnn/";
       return;
     }
 
-    if (id === 7) {
+    if (id === 5) {
       // ✅ GAN app
       window.location.href = "/gan/";
+      return;
+    }
+
+    if (id === 6) {
+      // Placeholder for CNN app
+      window.location.href = "/'Deep Neural Network'/";
       return;
     }
 

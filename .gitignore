@@ -2,9 +2,12 @@
 node_modules/
 /RNN/frontend/node_modules/
 /RNN/backend/.venv/
+/RNN/backend/.venv
+RNN/backend/.venv/
 .venv/
 venv/
 env/
+
 
 # Python cache
 __pycache__/

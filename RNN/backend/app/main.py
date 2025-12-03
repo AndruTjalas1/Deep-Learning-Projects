@@ -83,6 +83,10 @@ ALLOWED_ORIGINS: List[str] = [
     "https://cst-435-react-git-main-tatums-projects-965c11b1.vercel.app",
     "https://cst-435-react-n8pzza1hs-tatums-projects-965c11b1.vercel.app",
     "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
 ]
 # Accept preview deployments that follow Vercel's pattern
 ORIGIN_REGEX = r"^https://cst-435-react(?:-[a-z0-9]+)?-tatums-projects-965c11b1\.vercel\.app$"
@@ -326,4 +330,4 @@ async def handler(request: Request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 5001)))

@@ -1,5 +1,5 @@
 // RNN/frontend/src/services/rnnApi.js
-// Create React App env var (Option A) or Vercel rewrite (Option B) fallback.
+// Use environment variable for production, Vercel rewrite for deployment, localhost for dev
 const base = (process.env.REACT_APP_API_BASE || "/api").replace(/\/+$/, "");
 
 async function get(path) {

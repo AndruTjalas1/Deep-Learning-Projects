@@ -1,6 +1,7 @@
 // RNN/frontend/src/components/TextGenerator.js
 import React, { useState } from "react";
 import { rnnApi as api } from "../services/rnnApi";
+import "./TextGenerator.css";
 
 export default function TextGenerator() {
   const [seed, setSeed] = useState("the");
@@ -37,20 +38,23 @@ export default function TextGenerator() {
   };
 
   return (
-    <div className="card">
-      <h2>Text Generator</h2>
+    <div className="text-generator">
+      <h2>💬 Text Generator</h2>
 
-      <form onSubmit={handleGenerate} className="form">
-        <label>Seed Text:</label>
-        <input
-          value={seed}
-          onChange={(e) => setSeed(e.target.value)}
-          placeholder="Enter a starting phrase…"
-        />
+      <form onSubmit={handleGenerate} className="generator-form">
+        <div className="form-group">
+          <label>Seed Text</label>
+          <input
+            type="text"
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="Enter a starting phrase…"
+          />
+        </div>
 
-        <div className="row">
-          <div className="col">
-            <label>Words to Generate:</label>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Words to Generate</label>
             <input
               type="number"
               min={1}
@@ -60,8 +64,8 @@ export default function TextGenerator() {
             />
           </div>
 
-          <div className="col">
-            <label>Temperature: {Number(temperature).toFixed(2)}</label>
+          <div className="form-group">
+            <label>Temperature: <span className="temp-value">{Number(temperature).toFixed(2)}</span></label>
             <input
               type="range"
               min={0.2}
@@ -73,20 +77,33 @@ export default function TextGenerator() {
           </div>
         </div>
 
-        <button type="submit" disabled={loading || !seed.trim()}>
-          {loading ? "Generating…" : "✨ Generate Text"}
+        <button type="submit" disabled={loading || !seed.trim()} className="generate-btn">
+          {loading ? "⏳ Generating…" : "✨ Generate Text"}
         </button>
       </form>
 
-      {error && <div className="alert error">⚠️ {error}</div>}
+      {error && <div className="error-message">⚠️ {error}</div>}
 
-      <textarea
-        className="output"
-        rows={6}
-        readOnly
-        value={output}
-        placeholder="Your generated text will appear here…"
-      />
+      {output && (
+        <div className="output-container">
+          <h3>Generated Text</h3>
+          <div className="generated-text">
+            <p>{output}</p>
+          </div>
+        </div>
+      )}
+      {!output && !error && (
+        <div className="output-container placeholder">
+          <h3>Generated Text</h3>
+          <textarea
+            className="output-textarea"
+            rows={6}
+            readOnly
+            value={output}
+            placeholder="Your generated text will appear here…"
+          />
+        </div>
+      )}
     </div>
   );
 }

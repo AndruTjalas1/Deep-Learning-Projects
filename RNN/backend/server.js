@@ -25,3 +25,6 @@ app.get("/health", (req, res) =>
 );
 
 // Model info — support both spellings used across
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`RNN API listening on http://localhost:${PORT}`));
