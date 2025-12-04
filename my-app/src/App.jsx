@@ -40,7 +40,7 @@ export default function App() {
 
     if (id === 6) {
       // Placeholder for CNN app
-      window.location.href = "/'Deep Neural Network'/";
+      window.location.href = "/dnp/";
       return;
     }
 
