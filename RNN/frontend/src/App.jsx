@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import TextGenerator from './components/TextGenerator';
-import ModelInfo from './components/ModelInfo';
+import TextGenerator from './components/TextGenerator.jsx';
+import ModelInfo from './components/ModelInfo.jsx';
 import { rnnApi as api } from './services/rnnApi';
 import './App.css';
 

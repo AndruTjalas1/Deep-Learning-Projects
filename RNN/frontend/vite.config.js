@@ -1,14 +1,16 @@
 import { defineConfig } from "vite";
-// add plugins like react if this is a React app:
-// import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react";
+
 export default defineConfig({
-  // plugins: [react()],
-  base: "/rnn/",
+  plugins: [react()],
   server: {
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
+        rewrite: (path) => path,
+        logLevel: 'debug',
       }
     }
   }

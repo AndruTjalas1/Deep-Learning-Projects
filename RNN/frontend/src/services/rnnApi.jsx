@@ -1,6 +1,6 @@
-// RNN/frontend/src/services/rnnApi.js
+// RNN/frontend/src/services/rnnApi.jsx
 // Use environment variable for production, Vercel rewrite for deployment, localhost for dev
-const base = (process.env.REACT_APP_API_BASE || "/api").replace(/\/+$/, "");
+const base = (import.meta.env.VITE_API_BASE || "/api").replace(/\/+$/, "");
 
 async function get(path) {
   const res = await fetch(`${base}${path}`, {
@@ -25,12 +25,12 @@ async function post(path, body) {
 }
 
 export const rnnApi = {
-  health: () => get("/api/health"),
-  modelInfo: () => get("/api/model-info"),
+  health: () => get("/health"),
+  modelInfo: () => get("/model-info"),
 
   // Frontend-friendly inputs → FastAPI schema
   generate: ({ seed, words, temperature, topK = 0, topP = 0, useBeam = false, beamWidth = 3 }) =>
-    post("/api/generate", {
+    post("/generate", {
       seed_text: seed,
       num_words: Number(words),
       temperature: Number(temperature),
