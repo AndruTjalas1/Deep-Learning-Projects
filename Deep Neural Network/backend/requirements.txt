@@ -1,5 +1,12 @@
-# PyTorch CPU
+# PyTorch CPU (put at bottom for faster resolution)
 --extra-index-url https://download.pytorch.org/whl/cpu
+
+# ML core
+numpy==1.26.2
+pandas==2.2.3
+pillow==10.4.0
+pillow==10.4.0
+opencv-python-headless==4.8.1.78
 torch==2.6.0+cpu
 torchvision==0.21.0+cpu
 
@@ -12,14 +19,8 @@ pydantic-settings==2.2.1
 python-dotenv==1.0.0
 requests==2.31.0
 
-# Core compute
-numpy==1.26.2
-pandas==2.2.3
-pillow==10.4.0
-opencv-python-headless==4.8.1.78
-
 # Viz & utilities
-matplotlib>=3.9.0
+matplotlib==3.9.2
 seaborn==0.13.1
 plotly==5.18.0
 tqdm==4.66.1
