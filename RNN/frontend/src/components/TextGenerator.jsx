@@ -1,10 +1,11 @@
 // RNN/frontend/src/components/TextGenerator.js
 import React, { useState } from "react";
+import { FiLoader, FiAlertCircle, FiSend } from "react-icons/fi";
 import { rnnApi as api } from "../services/rnnApi";
 import "./TextGenerator.css";
 
 export default function TextGenerator() {
-  const [seed, setSeed] = useState("the");
+  const [seed, setSeed] = useState("Once upon a time");
   const [words, setWords] = useState(20);
   const [temperature, setTemperature] = useState(1.0);
 
@@ -39,7 +40,7 @@ export default function TextGenerator() {
 
   return (
     <div className="text-generator">
-      <h2>💬 Text Generator</h2>
+      <h2>Text Generator</h2>
 
       <form onSubmit={handleGenerate} className="generator-form">
         <div className="form-group">
@@ -78,11 +79,11 @@ export default function TextGenerator() {
         </div>
 
         <button type="submit" disabled={loading || !seed.trim()} className="generate-btn">
-          {loading ? "⏳ Generating…" : "✨ Generate Text"}
+          {loading ? <><FiLoader className="spinner" /> Generating…</> : <><FiSend /> Generate Text</>}
         </button>
       </form>
 
-      {error && <div className="error-message">⚠️ {error}</div>}
+      {error && <div className="error-message"><FiAlertCircle /> {error}</div>}
 
       {output && (
         <div className="output-container">

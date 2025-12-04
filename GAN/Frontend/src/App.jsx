@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { FiCpu, FiGitBranch, FiChevronRight, FiAlertCircle } from 'react-icons/fi';
+import Navbar from './components/Navbar';
 import trainingApi from './api';
 import './App.css';
+import './styles/Navbar.css';
 
 function App() {
   const [selectedAnimal, setSelectedAnimal] = useState('cat');
@@ -57,13 +60,14 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>🐱🐶 DCGAN Image Generator</h1>
+      <Navbar />
+      {/* <header className="app-header">
+        <h1>DCGAN Image Generator</h1>
         <p>Generate AI-created cat and dog images</p>
         <div className="device-status">
-          <span>Device: {getDeviceString()}</span>
+          <FiCpu /> Device: {getDeviceString()}
         </div>
-      </header>
+      </header> */}
 
       <main className="app-main">
         <div className="container">
@@ -78,14 +82,14 @@ function App() {
                   onClick={() => setSelectedAnimal('cat')}
                   disabled={isGenerating}
                 >
-                  🐱 Cats
+                  Cat Images
                 </button>
                 <button
                   className={`animal-button ${selectedAnimal === 'dog' ? 'active' : ''}`}
                   onClick={() => setSelectedAnimal('dog')}
                   disabled={isGenerating}
                 >
-                  🐶 Dogs
+                  Dog Images
                 </button>
               </div>
             </div>
@@ -111,10 +115,11 @@ function App() {
               onClick={handleGenerate}
               disabled={isGenerating}
             >
+              <FiChevronRight />
               {isGenerating ? 'Generating...' : 'Generate Images'}
             </button>
 
-            {error && <div className="error-message">{error}</div>}
+            {error && <div className="error-message"><FiAlertCircle /> {error}</div>}
           </div>
 
           {generatedImages.length > 0 && (
@@ -136,7 +141,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>AI Image Generation with DCGAN • Powered by PyTorch</p>
+        <p>DCGAN Image Generator • CST-435</p>
       </footer>
     </div>
   );

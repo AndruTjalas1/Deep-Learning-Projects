@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
+import { FiActivity, FiAlertCircle } from 'react-icons/fi'
+import Navbar from './components/Navbar'
 import Canvas from './components/Canvas'
 import CharacterGradingSpecialist from './components/CharacterGradingSpecialist'
 import { ResultDisplay } from './components/ResultDisplay'
 import { recognizeCharacter, recognizeSentence, healthCheck } from './api'
 import './App.css'
+import './styles/Navbar.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState('character')
@@ -60,7 +63,8 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
+      <Navbar />
+      {/* <header className="app-header">
         <div className="container">
           <div className="header-content">
             <h1>Handwriting Recognition System</h1>
@@ -70,11 +74,11 @@ function App() {
             <div className="server-status">
               {serverStatus?.error ? (
                 <span className="status error">
-                  Server Offline
+                  <FiAlertCircle /> Server Offline
                 </span>
               ) : serverStatus ? (
                 <span className="status online">
-                  Server Online
+                  <FiActivity /> Server Online
                 </span>
               ) : (
                 <span className="status loading">
@@ -84,7 +88,7 @@ function App() {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       <main className="app-main">
         <div className="container">
@@ -131,14 +135,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <div className="container">
-          <p>
-            Built with React + PyTorch | Deployed on Vercel + Railway
-          </p>
-          <p className="small">
-            Algorithm 1: CNN Classification | Algorithm 2: Character Segmentation | Algorithm 3: Confidence Scoring
-          </p>
-        </div>
+        <p>Deep Neural Network • CST-435</p>
       </footer>
     </div>
   )

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import Navbar from './components/Navbar.jsx';
 import TextGenerator from './components/TextGenerator.jsx';
 import ModelInfo from './components/ModelInfo.jsx';
 import { rnnApi as api } from './services/rnnApi';
 import './App.css';
+import './styles/Navbar.css';
 
 function App() {
   const [isConnected, setIsConnected] = useState(false);
@@ -27,21 +30,25 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
+      <Navbar />
+      {/* <header className="app-header">
         <div className="header-content">
-          <h1>🧠 RNN Text Generator</h1>
+          <h1>RNN Text Generator</h1>
           <p>Generate creative text using LSTM Neural Networks</p>
         </div>
         <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
-          <span className="status-dot"></span>
-          <span className="status-text">{isConnected ? 'Connected' : 'Disconnected'}</span>
+          {isConnected ? (
+            <><FiCheckCircle className="status-dot" /><span className="status-text">Connected</span></>
+          ) : (
+            <><FiAlertCircle className="status-dot" /><span className="status-text">Disconnected</span></>
+          )}
         </div>
-      </header>
+      </header> */}
 
       <main className="app-main">
         {connectionError && (
           <div className="connection-alert">
-            <span className="alert-icon">⚠️</span>
+            <FiAlertCircle className="alert-icon" />
             <div className="alert-content">
               <strong>Connection Issue</strong>
               <p>{connectionError}</p>
@@ -62,7 +69,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>RNN Text Generator • CST-435 • Powered by TensorFlow & FastAPI</p>
+        <p>RNN Text Generator • CST-435</p>
       </footer>
     </div>
   );

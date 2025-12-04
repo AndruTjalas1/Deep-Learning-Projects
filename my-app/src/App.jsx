@@ -1,5 +1,6 @@
 // my-app/src/App.jsx
 import React from "react";
+import Navbar from "./components/Navbar";
 import "./index.css";
 
 // Read API base from Vite env in prod; localhost in dev as fallback
@@ -70,6 +71,7 @@ export default function App() {
 
   return (
     <div className="page">
+      <Navbar />
       <header className="header">
         <h1 className="title">CST-435</h1>
         <p className="subtitle">Select a base project to get started</p>
