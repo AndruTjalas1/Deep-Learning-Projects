@@ -1,7 +1,7 @@
-# PyTorch CPU-only (works on standard PyPI)
-torch==2.1.0+cpu
-torchvision==0.16.0+cpu
-torchaudio==2.1.0+cpu
+# PyTorch CPU-only
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+torchaudio==2.2.2+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 numpy<2
