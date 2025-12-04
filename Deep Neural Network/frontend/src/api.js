@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL3 || 'https://localhost:8002'
+const API_URL = import.meta.env.VITE_API_URL3 || 'https://finalproject-production-fac3.up.railway.app'
+
 
 const api = axios.create({
   baseURL: API_URL,

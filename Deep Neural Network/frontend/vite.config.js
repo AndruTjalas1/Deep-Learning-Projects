@@ -12,6 +12,6 @@ export default defineConfig({
     sourcemap: false,
   },
   define: {
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:5000'),
+    'process.env.VITE_API_URL3': JSON.stringify(process.env.VITE_API_URL3 || 'http://localhost:5000'),
   }
 })
