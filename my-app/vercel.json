@@ -24,7 +24,6 @@
       "source": "/dnp/(.*)",
       "destination": "/dnp/$1"
     },
-    { "source": "/dnp/(.*)", "destination": "https://finalproject-production-fac3.up.railway.app/$1" },
     {
       "source": "/rnn",
       "destination": "/rnn/index.html"
