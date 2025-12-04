@@ -1,4 +1,37 @@
-{ "rewrites": 
-[ 
-  { "source": "/api/(.*)", "destination": "https://cst435react-production.up.railway.app/api/$1" }, { "source": "/api/gan/(.*)", "destination": "https://gan-production.up.railway.app/$1" }, { "source": "/gan", "destination": "/gan/index.html" }, { "source": "/gan/(.*)", "destination": "/gan/$1" }, { "source": "/dnp", "destination": "/dnp/index.html" }, { "source": "/dnp/(.*)", "destination": "/dnp/$1" }, { "source": "/rnn", "destination": "/rnn/index.html" }, { "source": "/rnn/(.*)", "destination": "/rnn/$1" } ] }
-
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://cst435react-production.up.railway.app/api/$1"
+    },
+    {
+      "source": "/api/gan/(.*)",
+      "destination": "https://gan-production.up.railway.app/$1"
+    },
+    {
+      "source": "/gan",
+      "destination": "/gan/index.html"
+    },
+    {
+      "source": "/gan/(.*)",
+      "destination": "/gan/$1"
+    },
+    {
+      "source": "/dnp",
+      "destination": "/dnp/index.html"
+    },
+    {
+      "source": "/dnp/(.*)",
+      "destination": "/dnp/$1"
+    },
+    { "source": "/dnp/(.*)", "destination": "https://finalproject-production-fac3.up.railway.app/$1" },
+    {
+      "source": "/rnn",
+      "destination": "/rnn/index.html"
+    },
+    {
+      "source": "/rnn/(.*)",
+      "destination": "/rnn/$1"
+    }
+  ]
+}
