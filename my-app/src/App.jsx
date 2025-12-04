@@ -2,20 +2,21 @@
 import React from "react";
 import Navbar from "./components/Navbar";
 import "./index.css";
+import "./index.css";
 
 // Read API base from Vite env in prod; localhost in dev as fallback
 const API_BASE = (import.meta?.env?.VITE_API_BASE ?? "http://localhost:8000").replace(/\/+$/, "");
 
-// External Streamlit target for Projects 1–4
+// External Streamlit target for Projects 1–3
 const STREAMLIT_URL = "https://cst-435-bxasfo3v8izfkfavktqpew.streamlit.app/";
 
 const PROJECTS = [
-  { id: 1, title: "Interior Designer", subtitle: "Project 1", emoji: "", slug: "project-1" },
-  { id: 2, title: "Sea Animal Identifier", subtitle: "Project 2", emoji: "", slug: "project-3" },
-  { id: 3, title: "Review Analysis", subtitle: "Project 3", emoji: "", slug: "project-4" },
-  { id: 4, title: "Story Generator", subtitle: "Project 4", emoji: "", slug: "project-5" },
-  { id: 5, title: "Cat and Dog Image Generator", subtitle: "Project 5", emoji: "", slug: "project-7" },
-  { id: 6, title: "Handwriting Training", subtitle: "Project 6", emoji: "", slug: "project-8" },
+  { id: 1, title: "Interior Designer", subtitle: "Project 1", slug: "project-1" },
+  { id: 2, title: "Sea Animal Identifier", subtitle: "Project 2", slug: "project-2" },
+  { id: 3, title: "Review Analysis", subtitle: "Project 3", slug: "project-3" },
+  { id: 4, title: "Story Generator", subtitle: "Project 4", slug: "project-4" },
+  { id: 5, title: "Cat and Dog Image Generator", subtitle: "Project 5", slug: "project-5" },
+  { id: 6, title: "Handwriting Training", subtitle: "Project 6", slug: "project-6" },
 ];
 
 export default function App() {
@@ -33,18 +34,18 @@ export default function App() {
     }
 
     if (id === 5) {
-      // ✅ GAN app
+      // GAN app
       window.location.href = "/gan/";
       return;
     }
 
     if (id === 6) {
-      // Placeholder for CNN app
+      // ✅ FIXED: Launch CNN project to /dnp/
       window.location.href = "/dnp/";
       return;
     }
 
-    // Projects 6 & 8 remain placeholders
+    // fallback
     window.location.href = `/project/${slug}`;
   };
 
@@ -54,15 +55,15 @@ export default function App() {
       return;
     }
     if (id === 4) {
-      alert(`${title}\nLSTM-based text generation system using deep learning. Trained on text data and deployed with FastAPI backend and React frontend.`);
-      return;
-    }
-    if (id === 6) {
-      alert(`${title}\nCNN-based handwriting recognition with character segmentation. Recognizes individual characters and continuous text with confidence scoring.`);
+      alert(`${title}\nLSTM text-gen trained on large corpora with FastAPI + React.`);
       return;
     }
     if (id === 5) {
-      alert(`${title}\nDCGAN system for generating images of cats and dogs. Features real-time training monitoring, GPU acceleration, and full-stack deployment.`);
+      alert(`${title}\nDCGAN for cats & dogs with full-stack deployment.`);
+      return;
+    }
+    if (id === 6) {
+      alert(`${title}\nCNN handwriting recognition; segmented letters and confidence scores.`);
       return;
     }
 
@@ -78,7 +79,7 @@ export default function App() {
       </header>
 
       <section className="grid">
-        {PROJECTS.map(({ id, title, subtitle, emoji, slug }) => (
+        {PROJECTS.map(({ id, title, subtitle, slug }) => (
           <article key={id} className="card" tabIndex={0}>
             <h2 className="cardTitle">{title}</h2>
             <p className="cardText">{subtitle}</p>
@@ -95,8 +96,8 @@ export default function App() {
       </section>
 
       <footer className="footer">
-        <a className="link" href={`${API_BASE}/api/health`} target="_blank" rel="noreferrer">
-          API Health
+        <a className="link" onClick={() => handleLaunch("dnp", 6)} >
+          Load /dnp/ Test
         </a>
       </footer>
     </div>
