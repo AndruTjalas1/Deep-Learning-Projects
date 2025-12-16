@@ -7,9 +7,9 @@
     "dev": "vite",
     "build": "npm run build:hub && npm run build:dnp && npm run build:gan && npm run build:rnn",
     "build:hub": "vite build",
-    "build:dnp": "cd ../Deep\\ Neural\\ Network/frontend && npm run build",
-    "build:gan": "cd ../GAN/Frontend && npm run build",
-    "build:rnn": "cd ../RNN/frontend && npm run build",
+    "build:dnp": "cd ../Deep\\ Neural\\ Network/frontend && npm install && npm run build",
+    "build:gan": "cd ../GAN/Frontend && npm install && npm run build",
+    "build:rnn": "cd ../RNN/frontend && npm install && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
