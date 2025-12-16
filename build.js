@@ -35,27 +35,35 @@ for (const project of projects) {
 // Copy all dist folders into my-app/dist for Vercel deployment
 console.log('📦 Consolidating builds for deployment...\n');
 
+const cwd = process.cwd();
 const projectPaths = [
-  { dist: '../Deep Neural Network/frontend/dist', dest: 'dist/dnp' },
-  { dist: '../GAN/Frontend/dist', dest: 'dist/gan' },
-  { dist: '../RNN/frontend/dist', dest: 'dist/rnn' },
+  { dist: 'Deep Neural Network/frontend/dist', dest: 'dist/dnp', name: 'DNN' },
+  { dist: 'GAN/Frontend/dist', dest: 'dist/gan', name: 'GAN' },
+  { dist: 'RNN/frontend/dist', dest: 'dist/rnn', name: 'RNN' },
 ];
 
-for (const { dist, dest } of projectPaths) {
-  const srcPath = path.join('.', dist);
-  const destPath = path.join('.', dest);
+for (const { dist, dest, name } of projectPaths) {
+  const srcPath = path.resolve(cwd, '..', dist);
+  const destPath = path.resolve(cwd, dest);
+  
+  console.log(`  Checking ${name}: ${srcPath}`);
   
   if (fs.existsSync(srcPath)) {
-    console.log(`  → Copying ${dist} to ${dest}...`);
+    console.log(`  → Copying ${name} from ${srcPath} to ${destPath}...`);
     
     // Remove existing destination
     if (fs.existsSync(destPath)) {
       fs.rmSync(destPath, { recursive: true, force: true });
     }
     
+    // Create dest parent if needed
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    
     // Copy directory
     fs.cpSync(srcPath, destPath, { recursive: true });
-    console.log(`  ✅ Copied ${dist}`);
+    console.log(`  ✅ Copied ${name}`);
+  } else {
+    console.warn(`  ⚠️  Source not found: ${srcPath}`);
   }
 }
 
