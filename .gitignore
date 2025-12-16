@@ -8,6 +8,15 @@ RNN/backend/.venv/
 venv/
 env/
 
+# Build artifacts - ignore old builds to force fresh Vite builds
+/my-app/dist/
+/Deep\ Neural\ Network/frontend/dist/
+/GAN/Frontend/dist/
+/RNN/frontend/dist/
+/RNN/frontend/build/
+/GAN/Frontend/build/
+Deep\ Neural\ Network/frontend/build/
+
 
 # Python cache
 __pycache__/
