@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 const projects = [
   { name: 'hub', path: '.', buildCmd: 'npx vite build' },
@@ -30,4 +32,31 @@ for (const project of projects) {
   }
 }
 
-console.log('✅ All projects built successfully!');
+// Copy all dist folders into my-app/dist for Vercel deployment
+console.log('📦 Consolidating builds for deployment...\n');
+
+const projectPaths = [
+  { dist: '../Deep Neural Network/frontend/dist', dest: 'dist/dnp' },
+  { dist: '../GAN/Frontend/dist', dest: 'dist/gan' },
+  { dist: '../RNN/frontend/dist', dest: 'dist/rnn' },
+];
+
+for (const { dist, dest } of projectPaths) {
+  const srcPath = path.join('.', dist);
+  const destPath = path.join('.', dest);
+  
+  if (fs.existsSync(srcPath)) {
+    console.log(`  → Copying ${dist} to ${dest}...`);
+    
+    // Remove existing destination
+    if (fs.existsSync(destPath)) {
+      fs.rmSync(destPath, { recursive: true, force: true });
+    }
+    
+    // Copy directory
+    fs.cpSync(srcPath, destPath, { recursive: true });
+    console.log(`  ✅ Copied ${dist}`);
+  }
+}
+
+console.log('\n✅ All projects built and consolidated successfully!');
