@@ -4,10 +4,10 @@ const { execSync } = require('child_process');
 const path = require('path');
 
 const projects = [
-  { name: 'hub', path: './my-app' },
-  { name: 'DNN', path: './Deep Neural Network/frontend' },
-  { name: 'GAN', path: './GAN/Frontend' },
-  { name: 'RNN', path: './RNN/frontend' },
+  { name: 'hub', path: '.' },
+  { name: 'DNN', path: '../Deep Neural Network/frontend' },
+  { name: 'GAN', path: '../GAN/Frontend' },
+  { name: 'RNN', path: '../RNN/frontend' },
 ];
 
 console.log('🚀 Building monorepo...\n');
