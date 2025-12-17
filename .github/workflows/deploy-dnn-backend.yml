@@ -3,7 +3,7 @@ name: Deploy DNN Backend
 on:
   push:
     paths:
-      - 'Deep Neural network/backend/**'
+      - 'Deep Neural Network/backend/**'
 
 jobs:
   deploy:
