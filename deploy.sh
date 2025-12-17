@@ -1,25 +1,21 @@
 #!/bin/bash
+set -e
 
-# Deployment script for monorepo with multiple backends
-# Each App Service sets BACKEND_FOLDER environment variable
+# Deployment script for DNN backend on Azure
+echo "Starting deployment for DNN backend..."
 
-# Use the environment variable, or default to DNN
-BACKEND_FOLDER=${BACKEND_FOLDER:-"Deep Neural Network/backend"}
+# Navigate to DNN backend
+cd "Deep Neural Network/backend" || { echo "ERROR: DNN backend folder not found"; exit 1; }
 
-echo "Deploying from folder: $BACKEND_FOLDER"
-
-# Navigate to the correct backend folder
-cd "$BACKEND_FOLDER" || { echo "ERROR: Folder not found: $BACKEND_FOLDER"; exit 1; }
-
-# Create virtual environment
+echo "Creating virtual environment..."
 python -m venv antenv
 
-# Activate virtual environment (Linux)
+echo "Activating virtual environment..."
 source antenv/bin/activate
 
-# Install dependencies
+echo "Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "Deployment successful from $BACKEND_FOLDER"
+echo "✓ DNN backend deployment successful"
 exit 0
