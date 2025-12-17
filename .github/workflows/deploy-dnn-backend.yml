@@ -17,4 +17,4 @@ jobs:
         with:
           publish-profile: ${{ secrets.DNN_BACKEND_PUBLISH_PROFILE }}
           app-name: dnn-api
-          package: "./Deep Neural network/backend"
+          package: "./Deep-Neural-Network/backend"
