@@ -2,24 +2,19 @@ name: Deploy DNN Backend
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Deploy to Azure
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           publish-profile: ${{ secrets.DNN_BACKEND_PUBLISH_PROFILE }}
-          app-name: dnn-backend
-          package: './Deep Neural network/backend'
+          app-name: dnn-api
+          package: "./Deep Neural network/backend"
