@@ -1,0 +1,20 @@
+name: Deploy RNN Backend
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          publish-profile: ${{ secrets.RNN_BACKEND_PUBLISH_PROFILE }}
+          app-name: rnn-api
+          package: "./RNN/backend"
