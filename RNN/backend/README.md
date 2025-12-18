@@ -1,6 +1,14 @@
 # RNN Text Generation System
 
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.12+-ff6f00.svg)](https://www.tensorflow.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18+-61dafb.svg)](https://react.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
+
 A complete machine learning project demonstrating how to build, train, and deploy a **Recurrent Neural Network (RNN)** for intelligent text generation using deep learning.
+
+**[🔗 Main Repository](../../)** • **[🎨 Frontend Code](../frontend)** 
 
 ## 📋 Project Overview
 
@@ -12,7 +20,7 @@ This project implements a **text generation system** using LSTM (Long Short-Term
 - **Data Processing**: Text preprocessing, tokenization, and sequence generation
 - **Deployment Ready**: Designed for cloud deployment
 
-### Key Features
+### 🌟 Key Features
 
 ✅ **LSTM-based RNN** - Deep learning model for sequential text processing  
 ✅ **Full Training Pipeline** - Data preprocessing → Model building → Training → Evaluation  
@@ -21,8 +29,6 @@ This project implements a **text generation system** using LSTM (Long Short-Term
 ✅ **Visualizations** - Training history plots and model architecture diagrams  
 ✅ **Parameter Control** - Adjustable temperature for controlling output randomness  
 ✅ **Production Ready** - Error handling, validation, CORS support  
-
----
 
 ## 🏗️ Project Structure
 

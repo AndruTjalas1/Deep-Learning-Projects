@@ -1,22 +1,34 @@
 # Handwriting Recognition System - Backend
 
-Python Flask backend for AI-powered handwriting and text recognition using PyTorch.
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 
-## Project Overview
+A production-grade deep learning backend for real-time handwriting and character recognition. Implements advanced computer vision techniques with a REST API for easy integration.
 
-This system implements **three deep learning algorithms**:
+**[🔗 Main Repository](../../)** • **[🎨 Frontend Code](../frontend)** • **[📚 Setup Guide](../SETUP_GUIDE.md)**
 
-1. **CNN (Convolutional Neural Network)** - Primary character/digit classifier
-2. **Character Segmentation** - Extracts individual characters from continuous handwriting
-3. **Confidence Scoring** - Uncertainty quantification using Bayesian approaches
+## 📋 Overview
 
-## Features
+This backend service provides:
+- **High-Accuracy Character Recognition** - CNN-based character classification
+- **Intelligent Segmentation** - Automatic character separation from continuous handwriting  
+- **Confidence Scoring** - Quantified certainty measures for predictions
+- **Multi-Model Approach** - Specialized models for digits, uppercase, and lowercase
+- **REST API** - Easy integration with frontend applications
+- **Production Ready** - Error handling, validation, logging
 
-- **Single Character Recognition**: Draw a character and get instant recognition with grading (A-F)
-- **Continuous Text Recognition**: Write sentences and automatically segment/recognize each character
-- **Confidence Scoring**: Get confidence scores and feedback for writing quality
-- **Real-time Processing**: Fast inference using PyTorch
-- **REST API**: Easy integration with frontend applications
+## 🌟 Features
+
+✨ **Real-time Recognition** - Instant predictions using GPU acceleration  
+✨ **Multi-Character Support** - Recognizes digits (0-9) and letters (A-Z, a-z)  
+✨ **Confidence Metrics** - Detailed certainty scores for each prediction  
+✨ **Character Segmentation** - Automatic separation of continuous text  
+✨ **Batch Processing** - Handle multiple images efficiently  
+✨ **Model Ensemble** - Specialist models for optimal accuracy  
+✨ **CORS Enabled** - Cross-origin requests from web frontends  
+✨ **Comprehensive Logging** - Request/response tracking and debugging  
 
 ## Project Structure
 

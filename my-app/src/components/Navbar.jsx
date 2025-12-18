@@ -6,8 +6,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-container">
         <div className="navbar-branding">
-          <h1 className="navbar-title">CST-435</h1>
-          <p className="navbar-subtitle">Machine Learning Projects</p>
+          <h1 className="navbar-title">Machine Learning Projects</h1>
         </div>
       </div>
     </nav>

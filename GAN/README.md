@@ -1,16 +1,25 @@
 # DCGAN Training System
 
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18+-61dafb.svg)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Supported-2496ed.svg)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
+
 A complete Deep Convolutional Generative Adversarial Network (DCGAN) setup for generating images of cats, dogs, and other animals. Designed for distributed training on both Windows (NVIDIA GPU) and Mac (Apple Silicon), with a real-time React frontend for monitoring training progress.
 
-## Features
+**[🔗 Main Repository](../../)** • **[📚 Getting Started](./GETTING_STARTED.md)** • **[🚀 Deployment](./DEPLOYMENT.md)** • **[📋 Examples](./EXAMPLES.md)**
 
-✨ **Multi-Animal Support**: Train models for cats, dogs, and easily add more animals
-🎨 **Real-Time Monitoring**: Live training metrics and sample visualization
-🚀 **GPU Acceleration**: Automatic support for NVIDIA CUDA, Apple MPS, and CPU fallback
-⚙️ **Easy Configuration**: YAML-based config with epochs, resolution, batch size customization
-📊 **Training Visualizations**: Loss tracking and sample generation during training
-🔧 **Modular Architecture**: Clean, maintainable Python code following modern best practices
-🌐 **Full Stack**: FastAPI backend + React frontend ready for deployment
+## 🌟 Features
+
+✨ **Multi-Animal Support** - Train models for cats, dogs, and easily add more animals  
+✨ **Real-Time Monitoring** - Live training metrics and sample visualization  
+✨ **GPU Acceleration** - Automatic support for NVIDIA CUDA, Apple MPS, and CPU fallback  
+✨ **Easy Configuration** - YAML-based config with epochs, resolution, batch size customization  
+✨ **Training Visualizations** - Loss tracking and sample generation during training  
+✨ **Modular Architecture** - Clean, maintainable Python code following modern best practices  
+✨ **Full Stack** - FastAPI backend + React frontend ready for deployment  
 
 ## Project Structure
 

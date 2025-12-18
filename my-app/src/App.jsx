@@ -73,7 +73,6 @@ export default function App() {
     <div className="page">
       <Navbar />
       <header className="header">
-        <h1 className="title">CST-435</h1>
         <p className="subtitle">Select a base project to get started</p>
       </header>
 
