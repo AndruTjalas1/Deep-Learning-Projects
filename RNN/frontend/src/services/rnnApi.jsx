@@ -2,8 +2,23 @@
 // Use environment variable for production, Vercel rewrite for deployment, localhost for dev
 const base = (import.meta.env.VITE_API_BASE || "/api").replace(/\/+$/, "");
 
+// 90 second timeout for cold starts on Azure Free Tier
+async function fetchWithTimeout(url, options = {}, timeout = 90000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
 async function get(path) {
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
@@ -12,7 +27,7 @@ async function get(path) {
 }
 
 async function post(path, body) {
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
