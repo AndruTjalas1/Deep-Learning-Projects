@@ -79,6 +79,7 @@ except Exception as e:
     print("[OPT] matmul precision hint skipped:", e, flush=True)
 
 ALLOWED_ORIGINS: List[str] = [
+    "https://deep-learning-projects-green.vercel.app",
     "https://cst-435-react.vercel.app",
     "https://cst-435-react-git-main-tatums-projects-965c11b1.vercel.app",
     "https://cst-435-react-n8pzza1hs-tatums-projects-965c11b1.vercel.app",
@@ -176,6 +177,7 @@ async def load_model() -> None:
 
     try:
         if MODEL_DIR is None:
+            print("[BOOT] ⚠️  WARNING: No model directory found - will return 503 until models are deployed", flush=True)
             raise FileNotFoundError("No candidate model directory contained required files (config.json, tokenizer.json)")
 
         model_pt = MODEL_DIR / "model.pt"
@@ -224,9 +226,10 @@ async def load_model() -> None:
 
         print("✅ MODEL LOADED SUCCESSFULLY", flush=True)
 
-    except Exception:
-        print("❌ MODEL LOAD FAILED", flush=True)
+    except Exception as e:
+        print("❌ MODEL LOAD FAILED:", str(e), flush=True)
         print(traceback.format_exc(), flush=True)
+        print("[BOOT] ⚠️  Server continuing without model. API will return 503 for /generate", flush=True)
 
 # -------------------------------------------------------------------
 # Helpers
