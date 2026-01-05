@@ -30,10 +30,17 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://deep-learning-projects-green.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Global state
@@ -50,12 +57,34 @@ async def startup_event():
     """Initialize on startup."""
     global config, device
     
-    config = get_config()
-    device = get_device(config.device.use_gpu)
-    
-    print("Server started successfully")
-    print(f"Device: {device}")
-    print(f"Device info: {get_device_info()}")
+    try:
+        print("[STARTUP] Loading configuration...")
+        config = get_config()
+        print(f"[STARTUP] Configuration loaded successfully")
+        
+        print("[STARTUP] Initializing device...")
+        device = get_device(config.device.use_gpu)
+        print(f"[STARTUP] Device: {device}")
+        print(f"[STARTUP] Device info: {get_device_info()}")
+        
+        print("[STARTUP] ✅ Server started successfully")
+    except Exception as e:
+        print(f"[STARTUP] ⚠️  Warning during initialization: {e}")
+        print("[STARTUP] Server will continue with fallback config")
+        # Set fallback defaults
+        if device is None:
+            device = torch.device("cpu")
+        if config is None:
+            from pydantic import BaseModel
+            class FallbackConfig(BaseModel):
+                device: object
+                generator: object
+                image: object
+            config = FallbackConfig(
+                device=type('obj', (object,), {'use_gpu': False})(),
+                generator=type('obj', (object,), {'latent_dim': 100, 'feature_maps': 64})(),
+                image=type('obj', (object,), {'channels': 3, 'resolution': 256})()
+            )
 
 
 @app.get("/")
