@@ -1,7 +1,9 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL3 || 'https://finalproject-production-fac3.up.railway.app'
+// Use environment variable, fallback to Render backend
+const API_URL = import.meta.env.VITE_API_URL3 || import.meta.env.VITE_API_BASE || 'https://deep-learning-projects-handwriting.onrender.com'
 
+console.log('API URL configured as:', API_URL)
 
 const api = axios.create({
   baseURL: API_URL,

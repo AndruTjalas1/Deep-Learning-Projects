@@ -57,17 +57,21 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration
+# CORS configuration - Allow Vercel deployments and all preview URLs
+cors_origins = [
+    "https://deep-learning-projects-green.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
+]
+
+# Allow all Vercel preview deployments (*.vercel.app)
+# This catches any preview deployment URLs automatically
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://deep-learning-projects-green.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
