@@ -12,7 +12,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
-  define: {
-    'process.env.VITE_API_URL3': JSON.stringify(process.env.VITE_API_URL3 || 'http://localhost:5000'),
-  }
 })

@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "env": {
+    "VITE_API_URL3": "@vite_api_url3"
+  },
+  "rewrites": [
+    {
+      "source": "/dnp/:path*",
+      "destination": "/dnp/index.html"
+    }
+  ]
+}
